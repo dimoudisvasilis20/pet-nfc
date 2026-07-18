@@ -29,10 +29,23 @@ const pool = process.env.DATABASE_URL
 
     });
 
+// pg emits 'error' on the pool whenever an already-connected, idle client
+// hits a problem (backend restart, network blip, cloud provider recycling
+// the connection, etc). Without a listener here, that's an unhandled error
+// event and Node crashes the whole process — which is why the server was
+// dying shortly after boot on Render instead of just logging and continuing.
+pool.on("error", (error) => {
+
+    console.log("❌ PostgreSQL pool error (connection recovered automatically)");
+    console.log(error);
+
+});
+
 pool.connect()
-    .then(() => {
+    .then((client) => {
 
         console.log("✅ PostgreSQL Connected");
+        client.release();
 
     })
     .catch((error) => {
