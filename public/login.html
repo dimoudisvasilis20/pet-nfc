@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>NFC Pet Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="auth-wrapper">
+<div class="auth-shell">
+
+<div class="auth-hero">
+<div class="emoji">🐕</div>
+<h2>Pet NFC</h2>
+<p>Το ψηφιακό προφίλ του κατοικιδίου σου, πάντα ένα σκανάρισμα μακριά. Καταχώρησε στοιχεία, ιατρικές πληροφορίες και μείνε συνδεδεμένος αν χαθεί.</p>
+</div>
+
+<div class="auth-form-side">
+<div class="auth-card">
+
+<h1>Σύνδεση</h1>
+
+<div class="field">
+<label for="email">Email</label>
+<input id="email" placeholder="Email">
+</div>
+
+<div class="field">
+<label for="password">Κωδικός</label>
+<input id="password" type="password" placeholder="Κωδικός">
+</div>
+
+<button class="btn" onclick="login()">Σύνδεση</button>
+
+<p id="result" class="result-msg"></p>
+
+<p class="subtext">Δεν έχεις λογαριασμό; <a href="/register.html">Εγγραφή</a></p>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+async function login(){
+
+    const data = {
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value
+    };
+
+    const response = await fetch("/login",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    const resultEl = document.getElementById("result");
+
+    if(response.ok){
+
+        resultEl.className = "result-msg success";
+        resultEl.innerHTML = "Καλώς ήρθες " + result.name;
+
+        window.location.href = result.role === "admin" ? "/admin/dashboard.html" : "/dashboard.html";
+
+    }
+    else{
+
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = "Λάθος στοιχεία";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>

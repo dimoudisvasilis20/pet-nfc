@@ -1,0 +1,9 @@
+node_modules/
+mobile/
+.claude/
+.env
+.env.*
+!.env.example
+public/uploads/pets/*
+!public/uploads/pets/.gitkeep
+*.log

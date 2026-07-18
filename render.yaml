@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: pet-nfc
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pet-nfc-db
+          property: connectionString
+
+databases:
+  - name: pet-nfc-db
+    plan: free

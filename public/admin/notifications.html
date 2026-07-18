@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Notifications — Pet NFC Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2>🐾 Pet NFC</h2>
+
+<a href="dashboard.html">🏠 Dashboard</a>
+
+<a href="users.html">👥 Users</a>
+
+<a href="pets.html">🐕 Pets</a>
+
+<a href="tags.html">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html" class="active">🔔 Notifications</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<div class="admin-toolbar">
+<h1>🔔 Notifications</h1>
+</div>
+
+<div class="table-scroll">
+<table class="data-table">
+<thead>
+<tr>
+<th>Χρήστης</th>
+<th>Τίτλος</th>
+<th>Μήνυμα</th>
+<th>Διαβάστηκε</th>
+<th>Ώρα</th>
+</tr>
+</thead>
+<tbody id="notifications-body">
+</tbody>
+</table>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none;">Δεν υπάρχουν ειδοποιήσεις.</div>
+
+</div>
+
+<script>
+
+async function loadNotifications() {
+
+    const response = await fetch("/admin/notifications");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    const notifications = await response.json();
+    const tbody = document.getElementById("notifications-body");
+    const emptyState = document.getElementById("empty-state");
+
+    if (notifications.length === 0) {
+        emptyState.style.display = "block";
+        return;
+    }
+
+    tbody.innerHTML = notifications.map((n) => `
+        <tr>
+            <td>${n.first_name} ${n.last_name}</td>
+            <td>${n.title}</td>
+            <td>${n.message}</td>
+            <td>${n.is_read
+                ? `<span class="status-badge status-active">Ναι</span>`
+                : `<span class="status-badge status-unassigned">Όχι</span>`
+            }</td>
+            <td>${new Date(n.created_at).toLocaleString("el-GR")}</td>
+        </tr>
+    `).join("");
+
+}
+
+loadNotifications();
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>NFC Tags — Pet NFC Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2>🐾 Pet NFC</h2>
+
+<a href="dashboard.html">🏠 Dashboard</a>
+
+<a href="users.html">👥 Users</a>
+
+<a href="pets.html">🐕 Pets</a>
+
+<a href="tags.html" class="active">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html">🔔 Notifications</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<div class="admin-toolbar">
+<h1>🏷 NFC Tags</h1>
+</div>
+
+<div class="card">
+
+<h2>Δημιουργία νέων tags</h2>
+<p style="color:var(--color-text-muted);font-size:13px;margin-top:-8px;">
+Κάθε tag παίρνει έναν μοναδικό τυχαίο κωδικό. Το link σάρωσης
+(<code>/p/&lt;κωδικός&gt;</code>) γράφεται/τυπώνεται πάνω στο φυσικό NFC tag —
+μέχρι να το συνδέσει κάποιος ιδιοκτήτης με κατοικίδιο, δείχνει απλώς "δεν βρέθηκε".
+</p>
+
+<form id="generate-form" class="inline-form">
+<div class="field">
+<label for="quantity">Ποσότητα</label>
+<input type="number" id="quantity" min="1" max="100" value="1" style="width:100px;">
+</div>
+<button type="submit" class="btn btn-auto">➕ Δημιουργία</button>
+</form>
+
+<div id="generated" style="display:none;margin-top:18px;">
+<div class="generated-list" id="generated-list"></div>
+</div>
+
+<div id="generate-message" style="margin-top:10px;font-size:13px;"></div>
+
+</div>
+
+<div class="tab-row">
+<button data-filter="all" class="active">Όλα</button>
+<button data-filter="unassigned">Χωρίς κατοικίδιο</button>
+<button data-filter="active">Ενεργά</button>
+</div>
+
+<div class="table-scroll">
+<table class="data-table">
+<thead>
+<tr>
+<th>Κωδικός</th>
+<th>Serial</th>
+<th>Κατάσταση</th>
+<th>Κατοικίδιο / Ιδιοκτήτης</th>
+<th>Δημιουργήθηκε</th>
+<th>Ενέργειες</th>
+</tr>
+</thead>
+<tbody id="tags-body">
+</tbody>
+</table>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none;">Δεν υπάρχουν tags ακόμα.</div>
+
+</div>
+
+<script>
+
+let allTags = [];
+let allPets = [];
+let currentFilter = "all";
+
+const STATUS_LABELS = {
+    unassigned: "Χωρίς κατοικίδιο",
+    active: "Ενεργό",
+    inactive: "Ανενεργό",
+    lost: "Χαμένο",
+    disabled: "Απενεργοποιημένο"
+};
+
+function scanLink(code) {
+    return `${location.origin}/p/${code}`;
+}
+
+async function loadTags() {
+
+    const response = await fetch("/tags");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    allTags = await response.json();
+    renderTags();
+
+}
+
+async function loadPets() {
+
+    const response = await fetch("/admin/pets");
+
+    if (!response.ok) return;
+
+    allPets = await response.json();
+
+}
+
+function renderTags() {
+
+    const tbody = document.getElementById("tags-body");
+    const emptyState = document.getElementById("empty-state");
+
+    const filtered = allTags.filter((tag) => {
+        if (currentFilter === "all") return true;
+        return tag.status === currentFilter;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.style.display = "block";
+        return;
+    }
+
+    emptyState.style.display = "none";
+
+    tbody.innerHTML = filtered.map((tag) => {
+
+        const owner = tag.pet_name
+            ? `${tag.pet_name}${tag.first_name ? " · " + tag.first_name + " " + tag.last_name : ""}`
+            : `<span style="color:var(--color-text-muted);">—</span>`;
+
+        const created = new Date(tag.created_at).toLocaleDateString("el-GR");
+
+        const actions = tag.status === "unassigned"
+            ? `
+                <select data-tag-id="${tag.id}" class="assign-select" style="width:auto;display:inline-block;padding:6px 8px;font-size:12px;">
+                    <option value="">Ανάθεση σε…</option>
+                    ${allPets.map((pet) => `<option value="${pet.id}">${pet.name} (${pet.first_name} ${pet.last_name})</option>`).join("")}
+                </select>
+                <button class="btn btn-danger btn-auto delete-btn" data-tag-id="${tag.id}" style="padding:6px 10px;font-size:12px;">Διαγραφή</button>
+            `
+            : `<span style="color:var(--color-text-muted);font-size:12px;">—</span>`;
+
+        return `
+            <tr>
+                <td><span class="code-chip">${tag.public_code}</span></td>
+                <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--color-text-muted);">${tag.serial_number}</td>
+                <td><span class="status-badge status-${tag.status}">${STATUS_LABELS[tag.status] || tag.status}</span></td>
+                <td>${owner}</td>
+                <td>${created}</td>
+                <td style="white-space:nowrap;">
+                    <a href="${scanLink(tag.public_code)}" target="_blank" class="btn btn-outline btn-auto" style="padding:6px 10px;font-size:12px;">🔗 Άνοιγμα</a>
+                    ${actions}
+                </td>
+            </tr>
+        `;
+
+    }).join("");
+
+    document.querySelectorAll(".delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => deleteTag(btn.dataset.tagId));
+    });
+
+    document.querySelectorAll(".assign-select").forEach((select) => {
+        select.addEventListener("change", () => {
+            if (select.value) assignTag(select.dataset.tagId, select.value);
+        });
+    });
+
+}
+
+async function deleteTag(id) {
+
+    if (!confirm("Διαγραφή αυτού του tag; Δεν μπορεί να αναιρεθεί.")) return;
+
+    const response = await fetch(`/tags/${id}`, { method: "DELETE" });
+
+    if (!response.ok) {
+        alert(await response.text());
+        return;
+    }
+
+    await loadTags();
+
+}
+
+async function assignTag(id, petId) {
+
+    const response = await fetch(`/tags/${id}/assign`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pet_id: petId })
+    });
+
+    if (!response.ok) {
+        alert(await response.text());
+        return;
+    }
+
+    await loadTags();
+
+}
+
+document.getElementById("generate-form").addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    const quantity = document.getElementById("quantity").value;
+    const messageEl = document.getElementById("generate-message");
+    messageEl.textContent = "";
+
+    const response = await fetch("/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity })
+    });
+
+    if (!response.ok) {
+        messageEl.style.color = "var(--color-danger)";
+        messageEl.textContent = await response.text();
+        return;
+    }
+
+    const data = await response.json();
+
+    const listEl = document.getElementById("generated-list");
+    listEl.innerHTML = data.tags.map((tag) => `
+        <div class="row">
+            <span class="code-chip">${tag.public_code}</span>
+            <a href="${scanLink(tag.public_code)}" target="_blank">${scanLink(tag.public_code)}</a>
+            <button onclick="navigator.clipboard.writeText('${scanLink(tag.public_code)}')" class="btn btn-outline btn-auto" style="padding:4px 10px;font-size:12px;">Αντιγραφή</button>
+        </div>
+    `).join("");
+
+    document.getElementById("generated").style.display = "block";
+    messageEl.style.color = "var(--color-success)";
+    messageEl.textContent = `✅ Δημιουργήθηκαν ${data.tags.length} νέα tags.`;
+
+    await loadTags();
+
+});
+
+document.querySelectorAll(".tab-row button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-row button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        renderTags();
+    });
+});
+
+(async () => {
+    // loadTags() renders using whatever allPets holds at that moment, so run
+    // it after loadPets() resolves — otherwise the assign dropdowns can end
+    // up empty if the pets request happens to finish second.
+    await loadPets();
+    await loadTags();
+})();
+
+</script>
+
+</body>
+
+</html>

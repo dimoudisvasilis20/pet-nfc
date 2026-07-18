@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Users — Pet NFC Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2>🐾 Pet NFC</h2>
+
+<a href="dashboard.html">🏠 Dashboard</a>
+
+<a href="users.html" class="active">👥 Users</a>
+
+<a href="pets.html">🐕 Pets</a>
+
+<a href="tags.html">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html">🔔 Notifications</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<div class="admin-toolbar">
+<h1>👥 Users</h1>
+</div>
+
+<div class="table-scroll">
+<table class="data-table">
+<thead>
+<tr>
+<th>Όνομα</th>
+<th>Email</th>
+<th>Τηλέφωνο</th>
+<th>Ρόλος</th>
+<th>Κατάσταση</th>
+<th>Εγγραφή</th>
+<th>Ενέργειες</th>
+</tr>
+</thead>
+<tbody id="users-body">
+</tbody>
+</table>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none;">Δεν υπάρχουν χρήστες.</div>
+
+</div>
+
+<script>
+
+let myUserId = null;
+
+async function loadMe() {
+
+    const response = await fetch("/me");
+
+    if (response.ok) {
+        const me = await response.json();
+        myUserId = String(me.id);
+    }
+
+}
+
+async function loadUsers() {
+
+    const response = await fetch("/admin/users");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    const users = await response.json();
+    const tbody = document.getElementById("users-body");
+    const emptyState = document.getElementById("empty-state");
+
+    if (users.length === 0) {
+        emptyState.style.display = "block";
+        return;
+    }
+
+    tbody.innerHTML = users.map((user) => {
+
+        const isSelf = String(user.id) === myUserId;
+
+        const actions = isSelf
+            ? `<span style="color:var(--color-text-muted);font-size:12px;">(εσύ)</span>`
+            : `
+                <button class="btn btn-outline btn-auto role-btn" data-id="${user.id}" data-role="${user.role === "admin" ? "user" : "admin"}" style="padding:6px 10px;font-size:12px;">
+                    ${user.role === "admin" ? "Αφαίρεση admin" : "Ορισμός admin"}
+                </button>
+                <button class="btn btn-danger btn-auto delete-btn" data-id="${user.id}" data-name="${user.first_name} ${user.last_name}" style="padding:6px 10px;font-size:12px;">
+                    Διαγραφή
+                </button>
+            `;
+
+        return `
+            <tr>
+                <td>${user.first_name} ${user.last_name}</td>
+                <td>${user.email}</td>
+                <td>${user.phone || "—"}</td>
+                <td><span class="status-badge status-${user.role}">${user.role === "admin" ? "Admin" : "Χρήστης"}</span></td>
+                <td><span class="status-badge status-${user.status === "active" ? "active" : "disabled"}">${user.status}</span></td>
+                <td>${new Date(user.created_at).toLocaleDateString("el-GR")}</td>
+                <td style="white-space:nowrap;">${actions}</td>
+            </tr>
+        `;
+
+    }).join("");
+
+    document.querySelectorAll(".role-btn").forEach((btn) => {
+        btn.addEventListener("click", () => setRole(btn.dataset.id, btn.dataset.role));
+    });
+
+    document.querySelectorAll(".delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => deleteUser(btn.dataset.id, btn.dataset.name));
+    });
+
+}
+
+async function setRole(id, role) {
+
+    const response = await fetch(`/admin/users/${id}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role })
+    });
+
+    if (!response.ok) {
+        alert(await response.text());
+        return;
+    }
+
+    await loadUsers();
+
+}
+
+async function deleteUser(id, name) {
+
+    if (!confirm(`Οριστική διαγραφή του χρήστη "${name}"; Θα διαγραφούν επίσης όλα τα κατοικίδιά του, τα NFC tags τους, και όλα τα σχετικά δεδομένα. Δεν μπορεί να αναιρεθεί.`)) {
+        return;
+    }
+
+    const response = await fetch(`/admin/users/${id}`, { method: "DELETE" });
+
+    if (!response.ok) {
+        alert(await response.text());
+        return;
+    }
+
+    await loadUsers();
+
+}
+
+(async () => {
+    await loadMe();
+    await loadUsers();
+})();
+
+</script>
+
+</body>
+
+</html>

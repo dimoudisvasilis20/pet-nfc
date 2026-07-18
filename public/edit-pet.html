@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Επεξεργασία κατοικιδίου</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html">🐾 Pet NFC</a>
+<div class="nav-links">
+<a href="/dashboard.html" class="active">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html">📅 Ημερολόγιο</a>
+<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar">
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page">
+
+<div class="card">
+
+<h1>✏️ Επεξεργασία κατοικιδίου</h1>
+
+<div class="field">
+<label for="photo">Φωτογραφία</label>
+<img id="photo-preview" class="photo-preview" style="display:none">
+<input id="photo" type="file" accept="image/*" onchange="previewPhoto()">
+</div>
+
+<div class="field">
+<label for="name">Όνομα</label>
+<input id="name" placeholder="Όνομα">
+</div>
+
+<div class="field">
+<label for="species">Είδος</label>
+<input id="species" placeholder="Είδος">
+</div>
+
+<div class="field">
+<label for="breed">Φυλή</label>
+<input id="breed" placeholder="Φυλή">
+</div>
+
+<div class="field">
+<label for="gender">Φύλο</label>
+<input id="gender" placeholder="Φύλο">
+</div>
+
+<div class="field">
+<label for="birth_date">Ημερομηνία γέννησης</label>
+<input id="birth_date" type="date">
+</div>
+
+<div class="field">
+<label for="weight">Βάρος</label>
+<input id="weight" placeholder="Βάρος">
+</div>
+
+<div class="field">
+<label for="color">Χρώμα</label>
+<input id="color" placeholder="Χρώμα">
+</div>
+
+<div class="field">
+<label for="microchip">Microchip</label>
+<input id="microchip" placeholder="Microchip">
+</div>
+
+<div class="field">
+<label for="medical_notes">Ιατρικές πληροφορίες</label>
+<textarea id="medical_notes" placeholder="Ιατρικές πληροφορίες"></textarea>
+</div>
+
+<div class="field">
+<label for="vet_name">Κτηνίατρος</label>
+<input id="vet_name" placeholder="Κτηνίατρος">
+</div>
+
+<div class="field">
+<label for="vet_phone">Τηλέφωνο κτηνιάτρου</label>
+<input id="vet_phone" placeholder="Τηλέφωνο κτηνιάτρου">
+</div>
+
+<button class="btn" onclick="savePet()">Αποθήκευση αλλαγών</button>
+
+<p id="result" class="result-msg"></p>
+
+</div>
+
+<div class="card">
+
+<h2>🏷 NFC Tag</h2>
+
+<p id="tag-current" class="result-msg" style="margin-top:0"></p>
+
+<div class="field">
+<label for="tag_code">Αριθμός/κωδικός tag</label>
+<input id="tag_code" placeholder="π.χ. ο κωδικός τυπωμένος στο tag">
+</div>
+
+<button class="btn btn-outline btn-auto" onclick="pairTag()">Σύνδεση tag</button>
+
+<p id="tag-result" class="result-msg"></p>
+
+</div>
+
+<div class="card">
+
+<h2>🔁 Μεταφορά σε άλλο χρήστη</h2>
+
+<p>Μεταφέρει το κατοικίδιο (και το NFC tag του) στον λογαριασμό άλλου χρήστη, με βάση το email του.</p>
+
+<div class="field">
+<label for="transfer_email">Email νέου ιδιοκτήτη</label>
+<input id="transfer_email" placeholder="email@example.com">
+</div>
+
+<button class="btn btn-outline btn-auto" onclick="transferPet()">Μεταφορά κατοικιδίου</button>
+
+<p id="transfer-result" class="result-msg"></p>
+
+</div>
+
+<div class="card">
+
+<h2>⚠ Διαγραφή κατοικιδίου</h2>
+
+<p>Η διαγραφή είναι οριστική και θα αφαιρέσει το κατοικίδιο και το ιστορικό σαρώσεών του.</p>
+
+<button class="btn btn-danger btn-auto" onclick="deletePet()">Διαγραφή κατοικιδίου</button>
+
+<p id="delete-result" class="result-msg"></p>
+
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+
+}
+
+const params = new URLSearchParams(window.location.search);
+const petId = params.get("id");
+
+if(!petId){
+    window.location.href = "/dashboard.html";
+}
+
+function previewPhoto(){
+
+    const file = document.getElementById("photo").files[0];
+    const preview = document.getElementById("photo-preview");
+
+    if(!file){
+        return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+
+}
+
+async function loadPet(){
+
+    const response = await fetch(`/pets/${petId}`);
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    if(!response.ok){
+        document.getElementById("result").innerHTML = "Το κατοικίδιο δεν βρέθηκε.";
+        return;
+    }
+
+    const pet = await response.json();
+
+    document.getElementById("name").value = pet.name || "";
+    document.getElementById("species").value = pet.species || "";
+    document.getElementById("breed").value = pet.breed || "";
+    document.getElementById("gender").value = pet.gender || "";
+    document.getElementById("birth_date").value = pet.birth_date ? pet.birth_date.split("T")[0] : "";
+    document.getElementById("weight").value = pet.weight || "";
+    document.getElementById("color").value = pet.color || "";
+    document.getElementById("microchip").value = pet.microchip || "";
+    document.getElementById("medical_notes").value = pet.medical_notes || "";
+    document.getElementById("vet_name").value = pet.vet_name || "";
+    document.getElementById("vet_phone").value = pet.vet_phone || "";
+
+    if(pet.photo){
+        const preview = document.getElementById("photo-preview");
+        preview.src = pet.photo;
+        preview.style.display = "block";
+    }
+
+    document.getElementById("tag-current").innerHTML = pet.public_code
+        ? `Τρέχον tag: <strong>${pet.public_code}</strong> · Κατάσταση: ${pet.tag_status || "-"}`
+        : "Δεν έχει συνδεθεί tag ακόμα.";
+
+    if(pet.public_code){
+        document.getElementById("tag_code").value = pet.public_code;
+    }
+
+}
+
+loadPet();
+
+async function pairTag(){
+
+    const code = document.getElementById("tag_code").value.trim();
+    const el = document.getElementById("tag-result");
+
+    if(!code){
+        el.className = "result-msg error";
+        el.innerHTML = "Συμπλήρωσε τον κωδικό του tag";
+        return;
+    }
+
+    const response = await fetch(`/pets/${petId}/tag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_code: code })
+    });
+
+    if(response.ok){
+
+        el.className = "result-msg success";
+        el.innerHTML = "✅ Το tag συνδέθηκε επιτυχώς";
+        loadPet();
+
+    }
+    else{
+
+        el.className = "result-msg error";
+        el.innerHTML = await response.text();
+
+    }
+
+}
+
+async function savePet(){
+
+    const data = new FormData();
+
+    data.append("name", document.getElementById("name").value);
+    data.append("species", document.getElementById("species").value);
+    data.append("breed", document.getElementById("breed").value);
+    data.append("gender", document.getElementById("gender").value);
+    data.append("birth_date", document.getElementById("birth_date").value);
+    data.append("weight", document.getElementById("weight").value);
+    data.append("color", document.getElementById("color").value);
+    data.append("microchip", document.getElementById("microchip").value);
+    data.append("medical_notes", document.getElementById("medical_notes").value);
+    data.append("vet_name", document.getElementById("vet_name").value);
+    data.append("vet_phone", document.getElementById("vet_phone").value);
+
+    const photoFile = document.getElementById("photo").files[0];
+
+    if(photoFile){
+        data.append("photo", photoFile);
+    }
+
+    const response = await fetch(`/pets/${petId}`, {
+        method: "PUT",
+        body: data
+    });
+
+    const resultEl = document.getElementById("result");
+
+    if(response.ok){
+
+        resultEl.className = "result-msg success";
+        resultEl.innerHTML = "✅ Οι αλλαγές αποθηκεύτηκαν";
+
+    }
+    else{
+
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = await response.text();
+
+    }
+
+}
+
+async function transferPet(){
+
+    const email = document.getElementById("transfer_email").value;
+
+    if(!email){
+        document.getElementById("transfer-result").innerHTML = "Συμπλήρωσε το email του νέου ιδιοκτήτη";
+        return;
+    }
+
+    if(!confirm(`Σίγουρα θέλεις να μεταφέρεις το κατοικίδιο στον χρήστη ${email};`)){
+        return;
+    }
+
+    const response = await fetch(`/pets/${petId}/transfer`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+    });
+
+    if(response.ok){
+
+        alert("Το κατοικίδιο μεταφέρθηκε επιτυχώς.");
+        window.location.href = "/dashboard.html";
+
+    }
+    else{
+
+        const el = document.getElementById("transfer-result");
+        el.className = "result-msg error";
+        el.innerHTML = await response.text();
+
+    }
+
+}
+
+async function deletePet(){
+
+    if(!confirm("Σίγουρα θέλεις να διαγράψεις οριστικά αυτό το κατοικίδιο;")){
+        return;
+    }
+
+    const response = await fetch(`/pets/${petId}`, {
+        method: "DELETE"
+    });
+
+    if(response.ok){
+
+        window.location.href = "/dashboard.html";
+
+    }
+    else{
+
+        const el = document.getElementById("delete-result");
+        el.className = "result-msg error";
+        el.innerHTML = await response.text();
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "pet-nfc",
+  "version": "1.0.0",
+  "description": "Pet NFC Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "mobile:web": "cd mobile && npx expo start --web --port 8082"
+  },
+  "keywords": [
+    "pet",
+    "nfc",
+    "express",
+    "postgres"
+  ],
+  "author": "Vasilis Dimoudis",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "expo": "^57.0.7",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "multer": "^2.2.0",
+    "pg": "^8.22.0"
+  }
+}

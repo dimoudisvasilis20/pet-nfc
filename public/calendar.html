@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Ημερολόγιο</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html">🐾 Pet NFC</a>
+<div class="nav-links">
+<a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html" class="active">📅 Ημερολόγιο</a>
+<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar">
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page page-wide">
+
+<h1>📅 Ημερολόγιο</h1>
+
+<div class="card">
+
+<h2>➕ Νέο ραντεβού / υπενθύμιση</h2>
+
+<div class="form-grid">
+
+<div class="field">
+<label for="event_pet">Κατοικίδιο</label>
+<select id="event_pet"></select>
+</div>
+
+<div class="field">
+<label for="event_type">Τύπος</label>
+<select id="event_type">
+<option value="vet">🩺 Κτηνίατρος</option>
+<option value="groomer">✂️ Groomer</option>
+<option value="medication">💊 Φάρμακο / Αγωγή</option>
+</select>
+</div>
+
+<div class="field">
+<label for="event_title">Τίτλος</label>
+<input id="event_title" placeholder="π.χ. Εμβολιασμός, Χάπι καρδιάς">
+</div>
+
+<div class="field">
+<label for="event_date">Ημερομηνία</label>
+<input id="event_date" type="date">
+</div>
+
+</div>
+
+<div class="field">
+<label for="event_notes">Σημειώσεις</label>
+<textarea id="event_notes" placeholder="Προαιρετικές σημειώσεις"></textarea>
+</div>
+
+<button class="btn btn-auto" onclick="addEvent()">Προσθήκη</button>
+
+<p id="event-result" class="result-msg"></p>
+
+</div>
+
+<div class="card">
+
+<div class="calendar-header">
+<h2 id="calendar-title"></h2>
+<div class="calendar-nav">
+<button class="btn btn-outline" onclick="changeMonth(-1)">← Προηγούμενος</button>
+<button class="btn btn-outline" onclick="changeMonth(1)">Επόμενος →</button>
+</div>
+</div>
+
+<div class="calendar-grid" id="calendar-weekdays">
+<div class="calendar-weekday">Δε</div>
+<div class="calendar-weekday">Τρ</div>
+<div class="calendar-weekday">Τε</div>
+<div class="calendar-weekday">Πε</div>
+<div class="calendar-weekday">Πα</div>
+<div class="calendar-weekday">Σα</div>
+<div class="calendar-weekday">Κυ</div>
+</div>
+
+<div class="calendar-grid" id="calendar-days"></div>
+
+</div>
+
+<div class="card">
+
+<h2>📋 Ραντεβού & υπενθυμίσεις μήνα</h2>
+
+<div id="events-list">Φόρτωση...</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+
+}
+
+const TYPE_LABELS = {
+    vet: "🩺 Κτηνίατρος",
+    groomer: "✂️ Groomer",
+    medication: "💊 Φάρμακο / Αγωγή"
+};
+
+let allEvents = [];
+let allPets = [];
+
+const today = new Date();
+let viewYear = today.getFullYear();
+let viewMonth = today.getMonth(); // 0-indexed
+
+function pad(n){
+    return String(n).padStart(2, "0");
+}
+
+function dateStrOf(dateLike){
+    return String(dateLike).slice(0, 10);
+}
+
+function formatDateStr(dateStr){
+
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+
+    return dt.toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
+
+}
+
+async function loadPets(){
+
+    const response = await fetch("/pets");
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    allPets = await response.json();
+
+    const select = document.getElementById("event_pet");
+
+    if(allPets.length === 0){
+        select.innerHTML = `<option value="">Πρόσθεσε πρώτα ένα κατοικίδιο</option>`;
+        return;
+    }
+
+    select.innerHTML = allPets.map(pet =>
+        `<option value="${pet.id}">${pet.name}</option>`
+    ).join("");
+
+}
+
+async function loadEvents(){
+
+    const response = await fetch("/calendar-events");
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    allEvents = await response.json();
+
+    renderCalendar();
+    renderEventsList();
+
+}
+
+function renderCalendar(){
+
+    document.getElementById("calendar-title").innerHTML =
+        new Date(viewYear, viewMonth, 1).toLocaleDateString("el-GR", { month: "long", year: "numeric" });
+
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    // JS getDay(): 0=Sunday..6=Saturday. Convert to Monday-first index (0=Mon..6=Sun).
+    const startOffset = (firstDay.getDay() + 6) % 7;
+
+    const todayStr = dateStrOf(today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate()));
+
+    let html = "";
+
+    for(let i = 0; i < startOffset; i++){
+        html += `<div class="calendar-day empty"></div>`;
+    }
+
+    for(let day = 1; day <= daysInMonth; day++){
+
+        const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
+
+        const dayEvents = allEvents.filter(e => dateStrOf(e.event_date) === dateStr);
+
+        const dots = dayEvents.map(e =>
+            `<span class="event-dot type-${e.type}"></span>`
+        ).join("");
+
+        const isToday = dateStr === todayStr ? " today" : "";
+
+        html += `
+        <div class="calendar-day${isToday}">
+        <div class="day-number">${day}</div>
+        <div class="calendar-day-dots">${dots}</div>
+        </div>
+        `;
+
+    }
+
+    document.getElementById("calendar-days").innerHTML = html;
+
+}
+
+function renderEventsList(){
+
+    const monthEvents = allEvents
+        .filter(e => {
+            const [y, m] = dateStrOf(e.event_date).split("-").map(Number);
+            return y === viewYear && (m - 1) === viewMonth;
+        })
+        .sort((a, b) => dateStrOf(a.event_date).localeCompare(dateStrOf(b.event_date)));
+
+    const container = document.getElementById("events-list");
+
+    if(monthEvents.length === 0){
+        container.innerHTML = `<p class="empty-state">Δεν υπάρχουν ραντεβού ή υπενθυμίσεις αυτόν τον μήνα.</p>`;
+        return;
+    }
+
+    container.innerHTML = monthEvents.map(e => `
+
+    <div class="event-row ${e.status === "completed" ? "completed" : ""}">
+
+    <div class="event-info">
+    <span class="event-type-badge type-${e.type}">${TYPE_LABELS[e.type] || e.type}</span>
+    <div class="event-title">${e.title}</div>
+    <div class="event-meta">🐾 ${e.pet_name} · 📅 ${formatDateStr(dateStrOf(e.event_date))}</div>
+    ${e.notes ? `<div class="event-meta">${e.notes}</div>` : ""}
+    </div>
+
+    <div class="event-actions">
+    <input type="date" id="reschedule-${e.id}" value="${dateStrOf(e.event_date)}">
+    <button class="btn btn-outline" onclick="rescheduleEvent(${e.id})">🔁 Μεταφορά</button>
+    ${e.status !== "completed" ? `<button class="btn btn-success" onclick="completeEvent(${e.id})">✅ Έγινε</button>` : ""}
+    <button class="btn btn-danger" onclick="deleteEvent(${e.id})">🗑 Διαγραφή</button>
+    </div>
+
+    </div>
+
+    `).join("");
+
+}
+
+function changeMonth(delta){
+
+    viewMonth += delta;
+
+    if(viewMonth < 0){
+        viewMonth = 11;
+        viewYear--;
+    }
+    else if(viewMonth > 11){
+        viewMonth = 0;
+        viewYear++;
+    }
+
+    renderCalendar();
+    renderEventsList();
+
+}
+
+async function addEvent(){
+
+    const pet_id = document.getElementById("event_pet").value;
+    const type = document.getElementById("event_type").value;
+    const title = document.getElementById("event_title").value;
+    const event_date = document.getElementById("event_date").value;
+    const notes = document.getElementById("event_notes").value;
+
+    const resultEl = document.getElementById("event-result");
+
+    if(!pet_id || !title || !event_date){
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = "Συμπλήρωσε κατοικίδιο, τίτλο και ημερομηνία";
+        return;
+    }
+
+    const response = await fetch("/calendar-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pet_id, type, title, notes, event_date })
+    });
+
+    if(response.ok){
+
+        resultEl.className = "result-msg success";
+        resultEl.innerHTML = "✅ Προστέθηκε";
+
+        document.getElementById("event_title").value = "";
+        document.getElementById("event_notes").value = "";
+        document.getElementById("event_date").value = "";
+
+        const created = await response.json();
+        const [y, m] = created.event.event_date.slice(0, 10).split("-").map(Number);
+        viewYear = y;
+        viewMonth = m - 1;
+
+        loadEvents();
+
+    }
+    else{
+
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = await response.text();
+
+    }
+
+}
+
+async function rescheduleEvent(id){
+
+    const newDate = document.getElementById(`reschedule-${id}`).value;
+
+    if(!newDate){
+        alert("Επίλεξε ημερομηνία");
+        return;
+    }
+
+    const response = await fetch(`/calendar-events/${id}/reschedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_date: newDate })
+    });
+
+    if(response.ok){
+        loadEvents();
+    }
+    else{
+        alert("Κάτι πήγε στραβά.");
+    }
+
+}
+
+async function completeEvent(id){
+
+    const response = await fetch(`/calendar-events/${id}/complete`, {
+        method: "PUT"
+    });
+
+    if(response.ok){
+        loadEvents();
+    }
+    else{
+        alert("Κάτι πήγε στραβά.");
+    }
+
+}
+
+async function deleteEvent(id){
+
+    if(!confirm("Σίγουρα θέλεις να διαγράψεις αυτή την εγγραφή;")){
+        return;
+    }
+
+    const response = await fetch(`/calendar-events/${id}`, {
+        method: "DELETE"
+    });
+
+    if(response.ok){
+        loadEvents();
+    }
+    else{
+        alert("Κάτι πήγε στραβά.");
+    }
+
+}
+
+loadPets();
+loadEvents();
+
+</script>
+
+</body>
+</html>

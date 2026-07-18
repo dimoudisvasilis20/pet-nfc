@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Τα κατοικίδιά μου</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html">🐾 Pet NFC</a>
+<div class="nav-links">
+<a href="/dashboard.html" class="active">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html">📅 Ημερολόγιο</a>
+<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar">
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page">
+
+<h1 id="welcome"></h1>
+
+<div class="card">
+<button class="btn btn-outline btn-auto" onclick="enableLostAlerts()">🔔 Ενεργοποίηση ειδοποιήσεων για χαμένα κατοικίδια κοντά μου</button>
+<p id="location-status" class="result-msg"></p>
+</div>
+
+<div class="card">
+<h2>🐾 Τα κατοικίδιά σου</h2>
+<div id="pets"></div>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+
+}
+
+
+async function loadDashboard(){
+
+
+const response = await fetch("/dashboard");
+
+
+if(response.status !== 200){
+
+window.location.href="/login.html";
+
+return;
+
+}
+
+
+const data = await response.json();
+
+
+
+document.getElementById("welcome").innerHTML =
+
+"Καλώς ήρθες " + data.user.first_name;
+
+
+
+let petsHTML="";
+
+
+
+data.pets.forEach(pet=>{
+
+
+petsHTML += `
+
+
+<div class="card pet-card">
+
+${pet.photo ? `<img class="pet-card-photo" src="${pet.photo}" alt="${pet.name}">` : `<div class="pet-card-photo-placeholder">🐾</div>`}
+
+<div class="pet-card-body">
+
+<div class="pet-name">
+
+🐕 ${pet.name}
+
+${pet.is_lost ? '<span class="badge badge-danger">ΧΑΜΕΝΟ</span>' : ""}
+
+</div>
+
+
+<p>
+
+Φυλή:
+${pet.breed || "Δεν έχει"}
+·
+Βάρος:
+${pet.weight || "-"} kg
+
+</p>
+
+
+<div class="tag-box">
+
+🏷 NFC:
+${pet.public_code || "Δεν έχει ενεργοποιηθεί"}
+·
+Κατάσταση:
+${pet.tag_status || "-"}
+
+</div>
+
+
+<div class="pet-card-actions">
+
+${pet.is_lost
+    ? `<button class="btn btn-danger" onclick="markFound(${pet.id})">✅ Το βρήκα</button>`
+    : `<button class="btn btn-success" onclick="markLost(${pet.id})">🚨 Χάθηκε</button>`
+}
+
+<a class="btn btn-outline" href="/edit-pet.html?id=${pet.id}">✏️ Επεξεργασία</a>
+
+</div>
+
+</div>
+
+</div>
+
+
+`;
+
+});
+
+
+
+document.getElementById("pets").innerHTML=petsHTML;
+
+
+
+}
+
+
+loadDashboard();
+
+
+
+async function markLost(petId){
+
+if(!navigator.geolocation){
+
+alert("Ο browser σου δεν υποστηρίζει τοποθεσία");
+
+return;
+
+}
+
+navigator.geolocation.getCurrentPosition(async (position)=>{
+
+const response = await fetch(`/pets/${petId}/lost`,{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json" },
+
+body: JSON.stringify({
+
+lat: position.coords.latitude,
+
+lng: position.coords.longitude
+
+})
+
+});
+
+const result = await response.json();
+
+if(response.ok){
+
+alert("Ενημερώθηκαν " + result.notified + " χρήστες κοντά στην περιοχή.");
+
+loadDashboard();
+
+}
+else{
+
+alert("Κάτι πήγε στραβά.");
+
+}
+
+}, ()=>{
+
+alert("Χρειάζεται πρόσβαση στην τοποθεσία σου για να ειδοποιηθούν οι κοντινοί χρήστες.");
+
+});
+
+}
+
+
+
+async function markFound(petId){
+
+const response = await fetch(`/pets/${petId}/found`,{
+
+method:"POST"
+
+});
+
+if(response.ok){
+
+loadDashboard();
+
+}
+else{
+
+alert("Κάτι πήγε στραβά.");
+
+}
+
+}
+
+
+
+function enableLostAlerts(){
+
+if(!navigator.geolocation){
+
+alert("Ο browser σου δεν υποστηρίζει τοποθεσία");
+
+return;
+
+}
+
+navigator.geolocation.getCurrentPosition(async (position)=>{
+
+const response = await fetch("/me/location",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json" },
+
+body: JSON.stringify({
+
+lat: position.coords.latitude,
+
+lng: position.coords.longitude,
+
+alert_radius_km: 10
+
+})
+
+});
+
+document.getElementById("location-status").innerHTML =
+
+response.ok
+
+? "✅ Θα ειδοποιείσαι για χαμένα κατοικίδια σε ακτίνα 10 χλμ."
+
+: "Κάτι πήγε στραβά.";
+
+}, ()=>{
+
+document.getElementById("location-status").innerHTML =
+
+"Χρειάζεται πρόσβαση στην τοποθεσία σου.";
+
+});
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>

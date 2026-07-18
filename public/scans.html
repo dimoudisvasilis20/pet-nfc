@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Τελευταίες σαρώσεις</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html">🐾 Pet NFC</a>
+<div class="nav-links">
+<a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html">📅 Ημερολόγιο</a>
+<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html" class="active">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar">
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page">
+
+<h1>📍 Τελευταίες σαρώσεις</h1>
+
+<div class="card">
+<div id="scans">Φόρτωση...</div>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+
+}
+
+async function loadScans(){
+
+    const response = await fetch("/scans");
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    const scans = await response.json();
+
+    if(scans.length === 0){
+        document.getElementById("scans").innerHTML =
+            `<p class="empty-state">Δεν υπάρχουν σαρώσεις ακόμα.</p>`;
+        return;
+    }
+
+    let html = "";
+
+    scans.forEach(scan => {
+
+        html += `
+
+<div class="scan-row">
+
+🐕 ${scan.pet_name}
+
+<br>
+
+📅 ${scan.scanned_at ? new Date(scan.scanned_at).toLocaleString("el-GR") : ""}
+
+<br>
+
+📱 ${scan.device || ""}
+
+</div>
+
+`;
+
+    });
+
+    document.getElementById("scans").innerHTML = html;
+
+}
+
+loadScans();
+
+</script>
+
+</body>
+</html>

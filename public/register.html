@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>NFC Pet Register</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="auth-wrapper">
+<div class="auth-shell">
+
+<div class="auth-hero">
+<div class="emoji">🐈</div>
+<h2>Γίνε μέλος</h2>
+<p>Δημιούργησε λογαριασμό, πρόσθεσε τα κατοικίδιά σου και ενεργοποίησε τα NFC tags τους μέσα σε λίγα λεπτά.</p>
+</div>
+
+<div class="auth-form-side">
+<div class="auth-card">
+
+<h1>Δημιουργία λογαριασμού</h1>
+
+<div class="field">
+<label for="first_name">Όνομα</label>
+<input id="first_name" placeholder="Όνομα">
+</div>
+
+<div class="field">
+<label for="last_name">Επώνυμο</label>
+<input id="last_name" placeholder="Επώνυμο">
+</div>
+
+<div class="field">
+<label for="email">Email</label>
+<input id="email" placeholder="Email">
+</div>
+
+<div class="field">
+<label for="phone">Τηλέφωνο</label>
+<input id="phone" placeholder="Τηλέφωνο">
+</div>
+
+<div class="field">
+<label for="password">Κωδικός</label>
+<input id="password" type="password" placeholder="Κωδικός">
+</div>
+
+<button class="btn" onclick="register()">Εγγραφή</button>
+
+<p id="result" class="result-msg"></p>
+
+<p class="subtext">Έχεις ήδη λογαριασμό; <a href="/login.html">Σύνδεση</a></p>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+async function register(){
+
+    const data={
+        first_name: document.getElementById("first_name").value,
+        last_name: document.getElementById("last_name").value,
+        email: document.getElementById("email").value,
+        phone: document.getElementById("phone").value,
+        password: document.getElementById("password").value
+    };
+
+    const response = await fetch("/register",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(data)
+    });
+
+    const text = await response.text();
+
+    const resultEl = document.getElementById("result");
+    resultEl.className = response.ok ? "result-msg success" : "result-msg error";
+    resultEl.innerHTML = text;
+
+}
+
+</script>
+
+</body>
+</html>

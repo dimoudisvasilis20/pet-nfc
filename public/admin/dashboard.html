@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Pet NFC Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2>🐾 Pet NFC</h2>
+
+<a href="dashboard.html" class="active">🏠 Dashboard</a>
+
+<a href="users.html">👥 Users</a>
+
+<a href="pets.html">🐕 Pets</a>
+
+<a href="tags.html">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html">🔔 Notifications</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<h1>Admin Dashboard</h1>
+
+<p>Καλώς ήρθες διαχειριστή.</p>
+
+<div class="stat-grid">
+
+<div class="stat-card">
+
+Users
+
+<div class="number" id="users">0</div>
+
+</div>
+
+<div class="stat-card">
+
+Pets
+
+<div class="number" id="pets">0</div>
+
+</div>
+
+<div class="stat-card">
+
+NFC Tags
+
+<div class="number" id="tags">0</div>
+
+</div>
+
+<div class="stat-card">
+
+Today's Scans
+
+<div class="number" id="scans">0</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+async function loadStats(){
+
+    const response = await fetch("/admin/stats");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    const data = await response.json();
+
+    document.getElementById("users").textContent = data.users;
+    document.getElementById("pets").textContent = data.pets;
+    document.getElementById("tags").textContent = data.tags;
+    document.getElementById("scans").textContent = data.scans;
+
+}
+
+loadStats();
+
+</script>
+
+</body>
+
+</html>

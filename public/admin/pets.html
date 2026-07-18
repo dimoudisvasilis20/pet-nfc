@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Pets — Pet NFC Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2>🐾 Pet NFC</h2>
+
+<a href="dashboard.html">🏠 Dashboard</a>
+
+<a href="users.html">👥 Users</a>
+
+<a href="pets.html" class="active">🐕 Pets</a>
+
+<a href="tags.html">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html">🔔 Notifications</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<div class="admin-toolbar">
+<h1>🐕 Pets</h1>
+</div>
+
+<div class="table-scroll">
+<table class="data-table">
+<thead>
+<tr>
+<th></th>
+<th>Όνομα</th>
+<th>Είδος / Φυλή</th>
+<th>Ιδιοκτήτης</th>
+<th>Κατάσταση</th>
+<th>Δημιουργήθηκε</th>
+</tr>
+</thead>
+<tbody id="pets-body">
+</tbody>
+</table>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none;">Δεν υπάρχουν κατοικίδια.</div>
+
+</div>
+
+<script>
+
+async function loadPets() {
+
+    const response = await fetch("/admin/pets");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    const pets = await response.json();
+    const tbody = document.getElementById("pets-body");
+    const emptyState = document.getElementById("empty-state");
+
+    if (pets.length === 0) {
+        emptyState.style.display = "block";
+        return;
+    }
+
+    tbody.innerHTML = pets.map((pet) => `
+        <tr>
+            <td>${pet.photo
+                ? `<img src="${pet.photo}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">`
+                : `<span style="font-size:20px;">🐾</span>`
+            }</td>
+            <td>${pet.name}</td>
+            <td>${[pet.species, pet.breed].filter(Boolean).join(" · ") || "—"}</td>
+            <td>${pet.first_name} ${pet.last_name}</td>
+            <td>${pet.is_lost
+                ? `<span class="status-badge status-lost">Χαμένο</span>`
+                : `<span class="status-badge status-active">OK</span>`
+            }</td>
+            <td>${new Date(pet.created_at).toLocaleDateString("el-GR")}</td>
+        </tr>
+    `).join("");
+
+}
+
+loadPets();
+
+</script>
+
+</body>
+
+</html>

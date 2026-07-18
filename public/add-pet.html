@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Add Pet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html">🐾 Pet NFC</a>
+<div class="nav-links">
+<a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html">📅 Ημερολόγιο</a>
+<a href="/add-pet.html" class="active">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar">
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page page-wide">
+
+<div class="card">
+
+<h1>🐕 Νέο κατοικίδιο</h1>
+
+<div class="field">
+<label for="photo">Φωτογραφία</label>
+<img id="photo-preview" class="photo-preview" style="display:none">
+<input id="photo" type="file" accept="image/*" onchange="previewPhoto()">
+</div>
+
+<div class="form-grid">
+
+<div class="field">
+<label for="name">Όνομα</label>
+<input id="name" placeholder="Όνομα">
+</div>
+
+<div class="field">
+<label for="species">Είδος</label>
+<input id="species" placeholder="Είδος">
+</div>
+
+<div class="field">
+<label for="breed">Φυλή</label>
+<input id="breed" placeholder="Φυλή">
+</div>
+
+<div class="field">
+<label for="gender">Φύλο</label>
+<input id="gender" placeholder="Φύλο">
+</div>
+
+<div class="field">
+<label for="birth_date">Ημερομηνία γέννησης</label>
+<input id="birth_date" type="date">
+</div>
+
+<div class="field">
+<label for="weight">Βάρος</label>
+<input id="weight" placeholder="Βάρος">
+</div>
+
+<div class="field">
+<label for="color">Χρώμα</label>
+<input id="color" placeholder="Χρώμα">
+</div>
+
+<div class="field">
+<label for="microchip">Microchip</label>
+<input id="microchip" placeholder="Microchip">
+</div>
+
+</div>
+
+<div class="field">
+<label for="medical_notes">Ιατρικές πληροφορίες</label>
+<textarea id="medical_notes" placeholder="Ιατρικές πληροφορίες"></textarea>
+</div>
+
+<div class="form-grid">
+
+<div class="field">
+<label for="vet_name">Κτηνίατρος</label>
+<input id="vet_name" placeholder="Κτηνίατρος">
+</div>
+
+<div class="field">
+<label for="vet_phone">Τηλέφωνο κτηνιάτρου</label>
+<input id="vet_phone" placeholder="Τηλέφωνο κτηνιάτρου">
+</div>
+
+</div>
+
+<div class="field">
+<label for="tag_code">🏷 Αριθμός NFC tag (προαιρετικό)</label>
+<input id="tag_code" placeholder="π.χ. ο κωδικός τυπωμένος στο tag">
+</div>
+
+<button class="btn" onclick="addPet()">Αποθήκευση</button>
+
+<p id="result" class="result-msg"></p>
+
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+
+}
+
+function previewPhoto(){
+
+    const file = document.getElementById("photo").files[0];
+    const preview = document.getElementById("photo-preview");
+
+    if(!file){
+        preview.style.display = "none";
+        return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+
+}
+
+async function addPet(){
+
+    const data = new FormData();
+
+    data.append("name", document.getElementById("name").value);
+    data.append("species", document.getElementById("species").value);
+    data.append("breed", document.getElementById("breed").value);
+    data.append("gender", document.getElementById("gender").value);
+    data.append("birth_date", document.getElementById("birth_date").value);
+    data.append("weight", document.getElementById("weight").value);
+    data.append("color", document.getElementById("color").value);
+    data.append("microchip", document.getElementById("microchip").value);
+    data.append("medical_notes", document.getElementById("medical_notes").value);
+    data.append("vet_name", document.getElementById("vet_name").value);
+    data.append("vet_phone", document.getElementById("vet_phone").value);
+
+    const photoFile = document.getElementById("photo").files[0];
+
+    if(photoFile){
+        data.append("photo", photoFile);
+    }
+
+    const response = await fetch("/pets",{
+        method:"POST",
+        body:data
+    });
+
+    const resultEl = document.getElementById("result");
+
+    if(response.ok){
+
+        const created = await response.json();
+        const tagCode = document.getElementById("tag_code").value.trim();
+
+        if(tagCode){
+
+            const tagResponse = await fetch(`/pets/${created.pet.id}/tag`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ public_code: tagCode })
+            });
+
+            if(tagResponse.ok){
+
+                resultEl.className = "result-msg success";
+                resultEl.innerHTML = "✅ Το κατοικίδιο προστέθηκε και το tag συνδέθηκε επιτυχώς";
+
+            }
+            else{
+
+                resultEl.className = "result-msg error";
+                resultEl.innerHTML = "✅ Το κατοικίδιο προστέθηκε, αλλά το tag δεν συνδέθηκε: " + await tagResponse.text();
+
+            }
+
+        }
+        else{
+
+            resultEl.className = "result-msg success";
+            resultEl.innerHTML = "✅ Το κατοικίδιο προστέθηκε επιτυχώς";
+
+        }
+
+    }
+    else{
+
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = await response.text();
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
