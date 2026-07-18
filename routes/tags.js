@@ -219,10 +219,14 @@ router.put("/tags/:id/assign", requireAdmin, async (req, res) => {
 
 /*
 ========================================
-DELETE UNASSIGNED TAG (admin)
+DELETE TAG (admin)
 ========================================
 */
 
+// Deletes a tag regardless of status — including one already paired to a
+// pet, which unlinks it in the same action (scan_history rows for it are
+// removed too via ON DELETE CASCADE). Needed e.g. when a tag was created in
+// error (duplicate/misread) or a physical tag is lost/broken.
 router.delete("/tags/:id", requireAdmin, async (req, res) => {
 
     try {
@@ -230,7 +234,7 @@ router.delete("/tags/:id", requireAdmin, async (req, res) => {
         const result = await pool.query(
             `
             DELETE FROM tags
-            WHERE id=$1 AND status='unassigned'
+            WHERE id=$1
             RETURNING id
             `,
             [req.params.id]
@@ -238,7 +242,7 @@ router.delete("/tags/:id", requireAdmin, async (req, res) => {
 
         if (result.rows.length === 0) {
 
-            return res.status(400).send("Only unassigned tags can be deleted — unpair it from its pet first.");
+            return res.status(404).send("Tag not found");
 
         }
 

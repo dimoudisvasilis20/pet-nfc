@@ -159,15 +159,19 @@ function renderTags() {
 
         const created = new Date(tag.created_at).toLocaleDateString("el-GR");
 
-        const actions = tag.status === "unassigned"
+        const assignControl = tag.status === "unassigned"
             ? `
                 <select data-tag-id="${tag.id}" class="assign-select" style="width:auto;display:inline-block;padding:6px 8px;font-size:12px;">
                     <option value="">Ανάθεση σε…</option>
                     ${allPets.map((pet) => `<option value="${pet.id}">${pet.name} (${pet.first_name} ${pet.last_name})</option>`).join("")}
                 </select>
-                <button class="btn btn-danger btn-auto delete-btn" data-tag-id="${tag.id}" style="padding:6px 10px;font-size:12px;">Διαγραφή</button>
             `
-            : `<span style="color:var(--color-text-muted);font-size:12px;">—</span>`;
+            : "";
+
+        const actions = `
+            ${assignControl}
+            <button class="btn btn-danger btn-auto delete-btn" data-tag-id="${tag.id}" data-tag-status="${tag.status}" style="padding:6px 10px;font-size:12px;">Διαγραφή</button>
+        `;
 
         return `
             <tr>
@@ -186,7 +190,7 @@ function renderTags() {
     }).join("");
 
     document.querySelectorAll(".delete-btn").forEach((btn) => {
-        btn.addEventListener("click", () => deleteTag(btn.dataset.tagId));
+        btn.addEventListener("click", () => deleteTag(btn.dataset.tagId, btn.dataset.tagStatus));
     });
 
     document.querySelectorAll(".assign-select").forEach((select) => {
@@ -197,9 +201,13 @@ function renderTags() {
 
 }
 
-async function deleteTag(id) {
+async function deleteTag(id, status) {
 
-    if (!confirm("Διαγραφή αυτού του tag; Δεν μπορεί να αναιρεθεί.")) return;
+    const warning = status !== "unassigned"
+        ? "Αυτό το tag είναι συνδεδεμένο με κατοικίδιο — η διαγραφή θα το αποσυνδέσει. Δεν μπορεί να αναιρεθεί."
+        : "Διαγραφή αυτού του tag; Δεν μπορεί να αναιρεθεί.";
+
+    if (!confirm(warning)) return;
 
     const response = await fetch(`/tags/${id}`, { method: "DELETE" });
 
