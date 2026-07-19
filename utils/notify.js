@@ -27,7 +27,14 @@ async function createNotification(userId, title, message, data = null) {
 
     if (user.rows[0]?.push_token) {
 
-        await sendPushNotification(user.rows[0].push_token, title, message, data || {});
+        // notificationId isn't stored in the `data` column itself (kept as
+        // exactly what the caller passed), only added to the push payload —
+        // it's how the app knows which row to mark read when the push
+        // itself is tapped, rather than an in-app row.
+        await sendPushNotification(user.rows[0].push_token, title, message, {
+            ...(data || {}),
+            notificationId: result.rows[0].id,
+        });
 
     }
 
