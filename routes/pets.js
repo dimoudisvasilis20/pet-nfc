@@ -623,7 +623,8 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
             await createNotification(
                 u.user_id,
                 "Χαμένο κατοικίδιο κοντά σου",
-                `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`
+                `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`,
+                { type: "lost_nearby" }
             );
 
         }

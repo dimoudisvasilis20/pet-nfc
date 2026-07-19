@@ -18,14 +18,18 @@ router.get("/me", requireLogin, async (req, res) => {
         const result = await pool.query(
             `
             SELECT
-                id,
-                first_name,
-                last_name,
-                email,
-                phone,
-                created_at
+                users.id,
+                users.first_name,
+                users.last_name,
+                users.email,
+                users.phone,
+                users.created_at,
+                (users.push_token IS NOT NULL) AS push_enabled,
+                (user_locations.user_id IS NOT NULL) AS location_shared
             FROM users
-            WHERE id = $1
+            LEFT JOIN user_locations
+                ON user_locations.user_id = users.id
+            WHERE users.id = $1
             `,
             [req.session.user_id]
         );
@@ -208,20 +212,18 @@ SAVE PUSH TOKEN (mobile app)
 
 router.put("/me/push-token", requireLogin, async (req, res) => {
 
+    // token: null explicitly clears it (used to turn push notifications
+    // off from the app's settings screen without deleting the account).
     const { token } = req.body;
-
-    if (!token) {
-        return res.status(400).send("token is required");
-    }
 
     try {
 
         await pool.query(
             "UPDATE users SET push_token = $1 WHERE id = $2",
-            [token, req.session.user_id]
+            [token || null, req.session.user_id]
         );
 
-        res.json({ message: "Push token saved" });
+        res.json({ message: token ? "Push token saved" : "Push token cleared" });
 
     } catch (error) {
 

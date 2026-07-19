@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     title VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    data JSONB, -- {type, ...ids} — lets the app/push tap deep-link to the relevant screen
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

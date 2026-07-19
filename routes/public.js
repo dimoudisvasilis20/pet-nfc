@@ -89,7 +89,8 @@ router.get("/p/:code", async (req, res) => {
         await createNotification(
             pet.user_id,
             "Νέα σάρωση NFC",
-            `Κάποιος σκάναρε το tag του ${pet.pet_name}`
+            `Κάποιος σκάναρε το tag του ${pet.pet_name}`,
+            { type: "nfc_scan", petId: pet.pet_id }
         );
 
         /*
@@ -98,7 +99,81 @@ router.get("/p/:code", async (req, res) => {
         ========================
         */
 
-        res.send(`
+        res.send(buildScanPage(pet, code));
+
+    }
+    catch(error){
+
+        console.log(error);
+
+        res.status(500)
+        .send("Database error");
+
+    }
+
+});
+
+/*
+========================================
+SHARE SCANNER'S LOCATION WITH THE OWNER
+(unauthenticated — the scanner is whoever
+found the pet, not a logged-in user)
+========================================
+*/
+
+router.post("/p/:code/share-location", async (req, res) => {
+
+    const code = req.params.code;
+    const { lat, lng } = req.body;
+
+    if (typeof lat !== "number" || typeof lng !== "number") {
+
+        return res.status(400).send("lat and lng (numbers) are required");
+
+    }
+
+    try {
+
+        const result = await pool.query(
+            `
+            SELECT pets.id AS pet_id, pets.name AS pet_name, users.id AS user_id
+            FROM tags
+            JOIN pets ON tags.pet_id = pets.id
+            JOIN users ON pets.user_id = users.id
+            WHERE tags.public_code = $1
+            `,
+            [code]
+        );
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).send("Δεν βρέθηκε κατοικίδιο");
+
+        }
+
+        const pet = result.rows[0];
+
+        await createNotification(
+            pet.user_id,
+            "📍 Κάποιος μοιράστηκε την τοποθεσία του",
+            `Κάποιος που σκάναρε το tag του ${pet.pet_name} μοιράστηκε την τοποθεσία του μαζί σου.`,
+            { type: "location_shared", petId: pet.pet_id, lat, lng }
+        );
+
+        res.json({ message: "Location shared" });
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).send("Share location error");
+
+    }
+
+});
+
+function buildScanPage(pet, code) {
+
+    return `
 <!DOCTYPE html>
 
 <html lang="el">
@@ -240,23 +315,78 @@ href="tel:${pet.phone}">
 
 </a>
 
+<button
+type="button"
+id="share-location-btn"
+class="btn btn-outline"
+style="margin-top:10px;width:100%;"
+onclick="shareLocation()">
+
+📍 Κοινοποίηση της τοποθεσίας μου
+
+</button>
+
+<p id="share-location-status" style="margin-top:10px;font-size:13px;color:var(--color-text-muted);"></p>
+
 </div>
+
+<script>
+
+function shareLocation(){
+
+    const statusEl = document.getElementById("share-location-status");
+    const btn = document.getElementById("share-location-btn");
+
+    if(!navigator.geolocation){
+        statusEl.textContent = "Η συσκευή σου δεν υποστηρίζει κοινοποίηση τοποθεσίας.";
+        return;
+    }
+
+    btn.disabled = true;
+    statusEl.textContent = "Λήψη τοποθεσίας...";
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+
+            try {
+
+                const response = await fetch("/p/${code}/share-location", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    })
+                });
+
+                if(response.ok){
+                    statusEl.textContent = "✅ Η τοποθεσία σου στάλθηκε στον ιδιοκτήτη.";
+                } else {
+                    statusEl.textContent = "Κάτι πήγε στραβά. Δοκίμασε ξανά.";
+                    btn.disabled = false;
+                }
+
+            } catch(e){
+                statusEl.textContent = "Κάτι πήγε στραβά. Δοκίμασε ξανά.";
+                btn.disabled = false;
+            }
+
+        },
+        () => {
+            statusEl.textContent = "Δεν δόθηκε πρόσβαση στην τοποθεσία σου.";
+            btn.disabled = false;
+        }
+    );
+
+}
+
+</script>
 
 </body>
 
 </html>
-`);
+`;
 
-    }
-    catch(error){
-
-        console.log(error);
-
-        res.status(500)
-        .send("Database error");
-
-    }
-
-});
+}
 
 module.exports = router;

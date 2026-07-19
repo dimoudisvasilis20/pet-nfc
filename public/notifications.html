@@ -80,6 +80,10 @@ async function loadNotifications(){
 
     notifications.forEach(n => {
 
+        const mapLink = (n.data && n.data.type === "location_shared" && n.data.lat && n.data.lng)
+            ? `<br><a href="https://www.google.com/maps?q=${n.data.lat},${n.data.lng}" target="_blank" onclick="event.stopPropagation()">📍 Άνοιγμα χάρτη</a>`
+            : "";
+
         html += `
 
 <div class="notification ${n.is_read ? "read" : "unread"}" onclick="openNotification(${n.id})">
@@ -89,6 +93,8 @@ async function loadNotifications(){
 <br>
 
 ${n.message}
+
+${mapLink}
 
 <br>
 
