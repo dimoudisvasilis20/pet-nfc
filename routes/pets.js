@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
 const { distanceKm } = require("../utils/geo");
+const { createNotification } = require("../utils/notify");
 
 const router = express.Router();
 
@@ -619,16 +620,10 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
 
         for (const u of toNotify) {
 
-            await pool.query(
-                `
-                INSERT INTO notifications (user_id, title, message)
-                VALUES ($1, $2, $3)
-                `,
-                [
-                    u.user_id,
-                    "Χαμένο κατοικίδιο κοντά σου",
-                    `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`
-                ]
+            await createNotification(
+                u.user_id,
+                "Χαμένο κατοικίδιο κοντά σου",
+                `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`
             );
 
         }

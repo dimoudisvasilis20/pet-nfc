@@ -200,4 +200,36 @@ router.delete("/me", requireLogin, async (req, res) => {
 
 });
 
+/*
+========================================
+SAVE PUSH TOKEN (mobile app)
+========================================
+*/
+
+router.put("/me/push-token", requireLogin, async (req, res) => {
+
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).send("token is required");
+    }
+
+    try {
+
+        await pool.query(
+            "UPDATE users SET push_token = $1 WHERE id = $2",
+            [token, req.session.user_id]
+        );
+
+        res.json({ message: "Push token saved" });
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).send("Push token error");
+
+    }
+
+});
+
 module.exports = router;

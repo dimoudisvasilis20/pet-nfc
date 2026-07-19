@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) NOT NULL DEFAULT 'user',        -- 'user' or 'admin'
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    push_token VARCHAR(200) -- Expo push token for the mobile app, NULL until the user grants notification permission
 );
 
 CREATE TABLE IF NOT EXISTS pets (

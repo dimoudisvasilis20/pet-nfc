@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db/database");
+const { createNotification } = require("../utils/notify");
 
 const router = express.Router();
 
@@ -85,26 +86,11 @@ router.get("/p/:code", async (req, res) => {
         ========================
         */
 
-        await pool.query(
-        `
-        INSERT INTO notifications
-        (
-            user_id,
-            title,
-            message
-        )
-        VALUES
-        (
-            $1,
-            $2,
-            $3
-        )
-        `,
-        [
+        await createNotification(
             pet.user_id,
             "Νέα σάρωση NFC",
             `Κάποιος σκάναρε το tag του ${pet.pet_name}`
-        ]);
+        );
 
         /*
         ========================

@@ -82,7 +82,7 @@ async function loadNotifications(){
 
         html += `
 
-<div class="notification">
+<div class="notification ${n.is_read ? "read" : "unread"}" onclick="openNotification(${n.id})">
 
 🔔 ${n.title}
 
@@ -101,6 +101,21 @@ ${n.message}
     });
 
     document.getElementById("notifications").innerHTML = html;
+
+}
+
+async function openNotification(id){
+
+    const notification = document.querySelector(`[onclick="openNotification(${id})"]`);
+
+    if(notification && notification.classList.contains("unread")){
+
+        notification.classList.remove("unread");
+        notification.classList.add("read");
+
+        await fetch(`/notifications/${id}/read`, { method: "PUT" });
+
+    }
 
 }
 
