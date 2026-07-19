@@ -289,11 +289,12 @@ a{
     align-items:flex-start;
     gap:12px;
     margin-bottom:12px;
+    font-size:46px;
 }
 
 .auth-hero h2.brand-h2 .brand-mark{
-    width:64px;
-    height:64px;
+    width:130px;
+    height:130px;
 }
 
 .auth-brand-mobile{
@@ -354,16 +355,16 @@ a{
         display:flex;
         align-items:center;
         justify-content:center;
-        gap:8px;
-        margin-bottom:22px;
+        gap:12px;
+        margin-bottom:26px;
         color:var(--color-primary);
-        font-size:22px;
+        font-size:38px;
         font-weight:800;
     }
 
     .auth-brand-mobile .brand-mark{
-        width:30px;
-        height:30px;
+        width:56px;
+        height:56px;
     }
 }
 
