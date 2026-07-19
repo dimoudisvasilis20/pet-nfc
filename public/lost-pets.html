@@ -111,10 +111,6 @@ ${pet.photo ? `<img class="pet-card-photo" src="${pet.photo}" alt="${pet.name}">
 
 <div class="distance">${pet.species || ""} ${pet.breed ? "· " + pet.breed : ""} · ${pet.distance_km.toFixed(1)} χλμ μακριά</div>
 
-<p>Ιδιοκτήτης: ${pet.first_name} ${pet.last_name}</p>
-
-${pet.phone ? `<div class="pet-card-actions"><a class="btn btn-success" href="tel:${pet.phone}">📞 Κλήση ιδιοκτήτη</a></div>` : ""}
-
 </div>
 
 </div>

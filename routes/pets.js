@@ -708,6 +708,10 @@ router.get("/pets/lost/nearby", async (req, res) => {
 
     try {
 
+        // No owner name/phone here — this is a public, unauthenticated
+        // endpoint, and only pet details should be visible to whoever's
+        // browsing "lost pets near me". Actual contact with the owner
+        // happens by scanning the pet's NFC tag if it's physically found.
         const result = await pool.query(
             `
             SELECT
@@ -718,12 +722,8 @@ router.get("/pets/lost/nearby", async (req, res) => {
                 pets.photo,
                 pets.last_seen_lat,
                 pets.last_seen_lng,
-                pets.lost_at,
-                users.first_name,
-                users.last_name,
-                users.phone
+                pets.lost_at
             FROM pets
-            JOIN users ON pets.user_id = users.id
             WHERE pets.is_lost = TRUE
             AND pets.last_seen_lat IS NOT NULL
             AND pets.last_seen_lng IS NOT NULL
