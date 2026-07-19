@@ -187,6 +187,8 @@ content="width=device-width, initial-scale=1">
 
 <title>${pet.pet_name}</title>
 
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
 <link rel="stylesheet" href="/css/style.css">
 
 <style>

@@ -288,6 +288,12 @@ a{
     margin-bottom:4px;
 }
 
+.auth-hero h2.brand-h2{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
 .auth-hero p{
     color:rgba(255,255,255,.85);
     font-size:15px;
@@ -683,6 +689,12 @@ textarea{
     font-size:18px;
     margin-bottom:24px;
     padding:0 8px;
+}
+
+.sidebar h2.brand-h2{
+    display:flex;
+    align-items:center;
+    gap:8px;
 }
 
 .sidebar a{
