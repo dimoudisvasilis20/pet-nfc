@@ -9,7 +9,7 @@ const { sendPushNotification } = require("./push");
 // notification and also sent as the push payload's data field, so tapping
 // either the push or the in-app notification row can deep-link to the
 // relevant screen instead of just opening the app.
-async function createNotification(userId, title, message, data = null) {
+async function createNotification(userId, title, message, data = null, categoryId = null) {
 
     const result = await pool.query(
         `
@@ -34,7 +34,7 @@ async function createNotification(userId, title, message, data = null) {
         await sendPushNotification(user.rows[0].push_token, title, message, {
             ...(data || {}),
             notificationId: result.rows[0].id,
-        });
+        }, categoryId);
 
     }
 

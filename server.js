@@ -15,6 +15,7 @@ const locationRoutes = require("./routes/location");
 const scanRoutes = require("./routes/scans");
 const accountRoutes = require("./routes/account");
 const calendarRoutes = require("./routes/calendar");
+const { sendDueCalendarReminders } = require("./utils/calendarReminders");
 
 const app = express();
 
@@ -54,3 +55,12 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// Periodic check for calendar events (vet/groomer/medication) whose date has
+// arrived, so a push reminder goes out even if nobody has the app open.
+// Simple setInterval rather than a cron library — good enough at this scale,
+// and Render's free tier spins the service down when idle anyway, so a
+// perfectly precise schedule isn't achievable here regardless.
+const CALENDAR_REMINDER_INTERVAL_MS = 15 * 60 * 1000;
+sendDueCalendarReminders();
+setInterval(sendDueCalendarReminders, CALENDAR_REMINDER_INTERVAL_MS);

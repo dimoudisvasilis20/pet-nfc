@@ -42,10 +42,27 @@ pool.on("error", (error) => {
 });
 
 pool.connect()
-    .then((client) => {
+    .then(async (client) => {
 
         console.log("✅ PostgreSQL Connected");
         client.release();
+
+        // Lightweight, idempotent schema patch — no migration framework here,
+        // so new columns just get added on boot the same way past ones were
+        // added by hand (see db/schema.sql, which is kept in sync as ground
+        // truth). Runs against whichever DB this process is pointed at
+        // (local dev or Render), so a deploy is all that's needed to apply it.
+        try {
+
+            await pool.query(
+                "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN NOT NULL DEFAULT FALSE"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (calendar_events.reminder_sent):", error.message);
+
+        }
 
     })
     .catch((error) => {

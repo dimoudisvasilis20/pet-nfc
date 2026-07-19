@@ -1,7 +1,7 @@
 // Sends a push notification through Expo's push service — no API key
 // needed, just the recipient's Expo push token (obtained client-side via
 // expo-notifications and stored on users.push_token).
-async function sendPushNotification(pushToken, title, body, data = {}) {
+async function sendPushNotification(pushToken, title, body, data = {}, categoryId = null) {
 
     if (!pushToken || !pushToken.startsWith("ExponentPushToken")) {
         return;
@@ -20,7 +20,11 @@ async function sendPushNotification(pushToken, title, body, data = {}) {
                 title,
                 body,
                 data,
-                sound: "default"
+                sound: "default",
+                // Lets the client attach action buttons (e.g. "OK" / "Υπενθύμιση
+                // σε 1 ώρα" on a calendar reminder) — the category itself is
+                // registered client-side, this just tells Expo which one to use.
+                ...(categoryId ? { categoryId } : {})
             })
         });
 
