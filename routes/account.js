@@ -218,6 +218,20 @@ router.put("/me/push-token", requireLogin, async (req, res) => {
 
     try {
 
+        // A device's Expo push token is per-device, not per-account — if a
+        // different user previously logged in on this same device, their
+        // row may still hold this exact token (e.g. if they didn't log out
+        // through a path that clears it). Strip it from anyone else first,
+        // so a token is only ever attached to the one account currently
+        // signed in on that device — otherwise both users would receive
+        // each other's notifications.
+        if (token) {
+            await pool.query(
+                "UPDATE users SET push_token = NULL WHERE push_token = $1 AND id != $2",
+                [token, req.session.user_id]
+            );
+        }
+
         await pool.query(
             "UPDATE users SET push_token = $1 WHERE id = $2",
             [token || null, req.session.user_id]

@@ -99,9 +99,16 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     event_time TIME,                                 -- optional time-of-day for the appointment
     status VARCHAR(20) NOT NULL DEFAULT 'scheduled', -- 'scheduled' | 'completed'
     reminder_sent BOOLEAN NOT NULL DEFAULT FALSE,     -- push reminder already sent for this event
+    recurrence VARCHAR(20) NOT NULL DEFAULT 'none',   -- 'none' | 'daily' | 'weekly' | 'monthly' | 'every_3_months' | 'every_6_months' | 'yearly'
+    recurrence_group_id INTEGER,                      -- id of the first occurrence in the series; NULL for one-off events
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- A push token is per-device, not per-account — this makes it structurally
+-- impossible for two user rows to hold the same token at once (which would
+-- mean one device receiving another account's notifications).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_push_token_unique ON users(push_token) WHERE push_token IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_pets_user_id ON pets(user_id);
 CREATE INDEX IF NOT EXISTS idx_pets_is_lost ON pets(is_lost);

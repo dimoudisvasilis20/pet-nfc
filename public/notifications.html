@@ -44,6 +44,17 @@
 </div>
 </div>
 
+<div id="location-choice-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:100;">
+<div style="background:var(--color-surface,#fff);border-radius:var(--radius,12px);padding:24px;max-width:320px;width:90%;text-align:center;">
+<p style="margin:0 0 16px;font-weight:600;">Πώς θέλεις να ανοίξεις την τοποθεσία;</p>
+<div style="display:flex;flex-direction:column;gap:8px;">
+<button class="btn" onclick="openLocationChoice('native')">🗺️ Χάρτες</button>
+<button class="btn btn-outline" onclick="openLocationChoice('browser')">🌐 Browser</button>
+<button class="btn btn-outline" onclick="closeLocationChoice()">Άκυρο</button>
+</div>
+</div>
+</div>
+
 </div>
 
 <script>
@@ -58,6 +69,11 @@ async function logout(){
     window.location.href = "/login.html";
 
 }
+
+// Keyed by notification id, populated while rendering — lets openNotification(id)
+// see the notification's data payload (e.g. lat/lng) without re-fetching it.
+const notificationData = {};
+let pendingLocation = null;
 
 async function loadNotifications(){
 
@@ -80,8 +96,17 @@ async function loadNotifications(){
 
     notifications.forEach(n => {
 
+        // Keep each notification's data payload around so openNotification(id)
+        // can branch on type (e.g. show the maps/browser choice) — the render
+        // loop is the only place we have it, since the DOM row itself only
+        // carries the id via its onclick handler.
+        notificationData[n.id] = n.data || null;
+
+        // Clicking the row now opens the maps/browser choice dialog itself
+        // (see openNotification), so a separate inline map link would just
+        // be a second, inconsistent way to do the same thing.
         const mapLink = (n.data && n.data.type === "location_shared" && n.data.lat && n.data.lng)
-            ? `<br><a href="https://www.google.com/maps?q=${n.data.lat},${n.data.lng}" target="_blank" onclick="event.stopPropagation()">📍 Άνοιγμα χάρτη</a>`
+            ? `<br><span class="distance">📍 Πάτησε για άνοιγμα τοποθεσίας</span>`
             : "";
 
         html += `
@@ -122,6 +147,38 @@ async function openNotification(id){
         await fetch(`/notifications/${id}/read`, { method: "PUT" });
 
     }
+
+    const data = notificationData[id];
+
+    if(data && data.type === "location_shared" && data.lat && data.lng){
+
+        pendingLocation = { lat: data.lat, lng: data.lng };
+        document.getElementById("location-choice-overlay").style.display = "flex";
+
+    }
+
+}
+
+function closeLocationChoice(){
+
+    pendingLocation = null;
+    document.getElementById("location-choice-overlay").style.display = "none";
+
+}
+
+function openLocationChoice(mode){
+
+    if(!pendingLocation) return;
+
+    const { lat, lng } = pendingLocation;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const nativeUrl = isIOS ? `maps://?q=${lat},${lng}` : `geo:${lat},${lng}?q=${lat},${lng}`;
+    const webUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+
+    window.open(mode === "native" ? nativeUrl : webUrl, "_blank");
+
+    closeLocationChoice();
 
 }
 

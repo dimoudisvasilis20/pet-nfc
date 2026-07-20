@@ -80,6 +80,48 @@ pool.connect()
 
         }
 
+        try {
+
+            await pool.query(
+                "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS recurrence VARCHAR(20) NOT NULL DEFAULT 'none'"
+            );
+            await pool.query(
+                "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS recurrence_group_id INTEGER"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (calendar_events.recurrence):", error.message);
+
+        }
+
+        try {
+
+            // Clear out any push_token duplicates left over from before the
+            // cross-user notification bug was fixed (same token on more than
+            // one row), keeping only the most recently updated row, before
+            // the unique index below can be created.
+            await pool.query(`
+                UPDATE users SET push_token = NULL
+                WHERE id IN (
+                    SELECT id FROM (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY push_token ORDER BY updated_at DESC NULLS LAST, id DESC
+                        ) AS rn
+                        FROM users WHERE push_token IS NOT NULL
+                    ) ranked WHERE rn > 1
+                )
+            `);
+            await pool.query(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_push_token_unique ON users(push_token) WHERE push_token IS NOT NULL"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (users.push_token unique index):", error.message);
+
+        }
+
     })
     .catch((error) => {
 

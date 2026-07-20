@@ -173,6 +173,10 @@ loadDashboard();
 
 async function markLost(petId){
 
+if(!confirm("Είστε σίγουρος/η ότι θέλετε να δηλώσετε την απώλεια του κατοικιδίου;")){
+return;
+}
+
 if(!navigator.geolocation){
 
 alert("Ο browser σου δεν υποστηρίζει τοποθεσία");

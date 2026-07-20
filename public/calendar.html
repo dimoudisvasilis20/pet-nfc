@@ -72,6 +72,19 @@
 <input id="event_time" type="time">
 </div>
 
+<div class="field">
+<label for="event_recurrence">Επανάληψη</label>
+<select id="event_recurrence">
+<option value="none">Καμία</option>
+<option value="daily">Κάθε μέρα</option>
+<option value="weekly">Κάθε βδομάδα</option>
+<option value="monthly">Κάθε μήνα</option>
+<option value="every_3_months">Κάθε 3 μήνες</option>
+<option value="every_6_months">Κάθε 6 μήνες</option>
+<option value="yearly">Κάθε χρόνο</option>
+</select>
+</div>
+
 </div>
 
 <div class="field">
@@ -139,6 +152,15 @@ const TYPE_LABELS = {
     vet: "🩺 Κτηνίατρος",
     groomer: "✂️ Groomer",
     medication: "💊 Φάρμακο / Αγωγή"
+};
+
+const RECURRENCE_LABELS = {
+    daily: "Κάθε μέρα",
+    weekly: "Κάθε βδομάδα",
+    monthly: "Κάθε μήνα",
+    every_3_months: "Κάθε 3 μήνες",
+    every_6_months: "Κάθε 6 μήνες",
+    yearly: "Κάθε χρόνο"
 };
 
 let allEvents = [];
@@ -272,7 +294,7 @@ function renderEventsList(){
     <div class="event-info">
     <span class="event-type-badge type-${e.type}">${TYPE_LABELS[e.type] || e.type}</span>
     <div class="event-title">${e.title}</div>
-    <div class="event-meta">🐾 ${e.pet_name} · 📅 ${formatDateStr(dateStrOf(e.event_date))}${e.event_time ? ` · 🕐 ${e.event_time.slice(0, 5)}` : ""}</div>
+    <div class="event-meta">🐾 ${e.pet_name} · 📅 ${formatDateStr(dateStrOf(e.event_date))}${e.event_time ? ` · 🕐 ${e.event_time.slice(0, 5)}` : ""}${e.recurrence && e.recurrence !== "none" ? ` · 🔁 ${RECURRENCE_LABELS[e.recurrence] || e.recurrence}` : ""}</div>
     ${e.notes ? `<div class="event-meta">${e.notes}</div>` : ""}
     </div>
 
@@ -316,6 +338,7 @@ async function addEvent(){
     const event_date = document.getElementById("event_date").value;
     const event_time = document.getElementById("event_time").value;
     const notes = document.getElementById("event_notes").value;
+    const recurrence = document.getElementById("event_recurrence").value;
 
     const resultEl = document.getElementById("event-result");
 
@@ -328,7 +351,7 @@ async function addEvent(){
     const response = await fetch("/calendar-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pet_id, type, title, notes, event_date, event_time: event_time || null })
+        body: JSON.stringify({ pet_id, type, title, notes, event_date, event_time: event_time || null, recurrence })
     });
 
     if(response.ok){
@@ -340,6 +363,7 @@ async function addEvent(){
         document.getElementById("event_notes").value = "";
         document.getElementById("event_date").value = "";
         document.getElementById("event_time").value = "";
+        document.getElementById("event_recurrence").value = "none";
 
         const created = await response.json();
         const [y, m] = created.event.event_date.slice(0, 10).split("-").map(Number);
