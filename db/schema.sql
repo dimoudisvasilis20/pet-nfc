@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     title VARCHAR(150) NOT NULL,
     notes TEXT,
     event_date DATE NOT NULL,
+    event_time TIME,                                 -- optional time-of-day for the appointment
     status VARCHAR(20) NOT NULL DEFAULT 'scheduled', -- 'scheduled' | 'completed'
     reminder_sent BOOLEAN NOT NULL DEFAULT FALSE,     -- push reminder already sent for this event
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),

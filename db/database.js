@@ -7,6 +7,10 @@ const { Pool, types } = require("pg");
 // depending on server timezone. Keep them as plain 'YYYY-MM-DD' strings instead.
 types.setTypeParser(1082, (value) => value);
 
+// Same reasoning as DATE (OID 1082) above: keep TIME columns (OID 1083) as
+// plain 'HH:MM:SS' strings instead of letting pg wrap them in a JS Date.
+types.setTypeParser(1083, (value) => value);
+
 // Most cloud Postgres providers (Render, Railway, Neon, Supabase...) hand out
 // a single DATABASE_URL and require SSL; local dev keeps using the discrete
 // DB_* vars against a plain local Postgres with no SSL.
@@ -61,6 +65,18 @@ pool.connect()
         } catch (error) {
 
             console.log("❌ Migration error (calendar_events.reminder_sent):", error.message);
+
+        }
+
+        try {
+
+            await pool.query(
+                "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS event_time TIME"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (calendar_events.event_time):", error.message);
 
         }
 

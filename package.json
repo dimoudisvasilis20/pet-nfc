@@ -1,7 +1,7 @@
 {
   "name": "pet-nfc",
   "version": "1.0.0",
-  "description": "Chnari — pet NFC identification & recovery platform",
+  "description": "PawTrace — pet NFC identification & recovery platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

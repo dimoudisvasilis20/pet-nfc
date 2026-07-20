@@ -15,7 +15,7 @@
 <div class="app-shell">
 
 <div class="app-sidebar">
-<a class="brand" href="/dashboard.html"><svg class="brand-mark" viewBox="0 0 100 100" width="22" height="22" aria-hidden="true"><mask id="pc"><rect width="100" height="100" fill="#fff"/><ellipse cx="50" cy="52" rx="14" ry="10.5" fill="#000"/><circle cx="36" cy="35" r="7" fill="#000"/><circle cx="50" cy="27" r="7.5" fill="#000"/><circle cx="64" cy="35" r="7" fill="#000"/></mask><path d="M50 8 C30 8 15 23 15 43 C15 60 28 72 42 88 L47 95 C48.5 97 51.5 97 53 95 L58 88 C72 72 85 60 85 43 C85 23 70 8 50 8 Z" fill="currentColor" mask="url(#pc)"/></svg> Chnari</a>
+<a class="brand" href="/dashboard.html"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</a>
 <div class="nav-links">
 <a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
 <a href="/calendar.html" class="active">📅 Ημερολόγιο</a>
@@ -65,6 +65,11 @@
 <div class="field">
 <label for="event_date">Ημερομηνία</label>
 <input id="event_date" type="date">
+</div>
+
+<div class="field">
+<label for="event_time">Ώρα (προαιρετικό)</label>
+<input id="event_time" type="time">
 </div>
 
 </div>
@@ -267,12 +272,13 @@ function renderEventsList(){
     <div class="event-info">
     <span class="event-type-badge type-${e.type}">${TYPE_LABELS[e.type] || e.type}</span>
     <div class="event-title">${e.title}</div>
-    <div class="event-meta">🐾 ${e.pet_name} · 📅 ${formatDateStr(dateStrOf(e.event_date))}</div>
+    <div class="event-meta">🐾 ${e.pet_name} · 📅 ${formatDateStr(dateStrOf(e.event_date))}${e.event_time ? ` · 🕐 ${e.event_time.slice(0, 5)}` : ""}</div>
     ${e.notes ? `<div class="event-meta">${e.notes}</div>` : ""}
     </div>
 
     <div class="event-actions">
     <input type="date" id="reschedule-${e.id}" value="${dateStrOf(e.event_date)}">
+    <input type="time" id="reschedule-time-${e.id}" value="${e.event_time ? e.event_time.slice(0, 5) : ""}">
     <button class="btn btn-outline" onclick="rescheduleEvent(${e.id})">🔁 Μεταφορά</button>
     ${e.status !== "completed" ? `<button class="btn btn-success" onclick="completeEvent(${e.id})">✅ Έγινε</button>` : ""}
     <button class="btn btn-danger" onclick="deleteEvent(${e.id})">🗑 Διαγραφή</button>
@@ -308,6 +314,7 @@ async function addEvent(){
     const type = document.getElementById("event_type").value;
     const title = document.getElementById("event_title").value;
     const event_date = document.getElementById("event_date").value;
+    const event_time = document.getElementById("event_time").value;
     const notes = document.getElementById("event_notes").value;
 
     const resultEl = document.getElementById("event-result");
@@ -321,7 +328,7 @@ async function addEvent(){
     const response = await fetch("/calendar-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pet_id, type, title, notes, event_date })
+        body: JSON.stringify({ pet_id, type, title, notes, event_date, event_time: event_time || null })
     });
 
     if(response.ok){
@@ -332,6 +339,7 @@ async function addEvent(){
         document.getElementById("event_title").value = "";
         document.getElementById("event_notes").value = "";
         document.getElementById("event_date").value = "";
+        document.getElementById("event_time").value = "";
 
         const created = await response.json();
         const [y, m] = created.event.event_date.slice(0, 10).split("-").map(Number);
@@ -353,6 +361,7 @@ async function addEvent(){
 async function rescheduleEvent(id){
 
     const newDate = document.getElementById(`reschedule-${id}`).value;
+    const newTime = document.getElementById(`reschedule-time-${id}`).value;
 
     if(!newDate){
         alert("Επίλεξε ημερομηνία");
@@ -362,7 +371,7 @@ async function rescheduleEvent(id){
     const response = await fetch(`/calendar-events/${id}/reschedule`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_date: newDate })
+        body: JSON.stringify({ event_date: newDate, event_time: newTime || null })
     });
 
     if(response.ok){

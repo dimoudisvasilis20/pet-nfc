@@ -47,7 +47,7 @@ CREATE CALENDAR EVENT
 
 router.post("/calendar-events", requireLogin, async (req, res) => {
 
-    const { pet_id, type, title, notes, event_date } = req.body;
+    const { pet_id, type, title, notes, event_date, event_time } = req.body;
 
     if (!pet_id || !type || !title || !event_date) {
 
@@ -71,12 +71,12 @@ router.post("/calendar-events", requireLogin, async (req, res) => {
         const result = await pool.query(
             `
             INSERT INTO calendar_events
-            (user_id, pet_id, type, title, notes, event_date)
+            (user_id, pet_id, type, title, notes, event_date, event_time)
             VALUES
-            ($1,$2,$3,$4,$5,$6)
+            ($1,$2,$3,$4,$5,$6,$7)
             RETURNING *
             `,
-            [req.session.user_id, pet_id, type, title, notes || null, event_date]
+            [req.session.user_id, pet_id, type, title, notes || null, event_date, event_time || null]
         );
 
         res.json({
@@ -101,7 +101,7 @@ RESCHEDULE EVENT (move to another date)
 
 router.put("/calendar-events/:id/reschedule", requireLogin, async (req, res) => {
 
-    const { event_date } = req.body;
+    const { event_date, event_time } = req.body;
 
     if (!event_date) {
 
@@ -115,12 +115,13 @@ router.put("/calendar-events/:id/reschedule", requireLogin, async (req, res) => 
             `
             UPDATE calendar_events
             SET event_date=$1,
+                event_time=COALESCE($2, event_time),
                 updated_at=NOW()
-            WHERE id=$2
-            AND user_id=$3
+            WHERE id=$3
+            AND user_id=$4
             RETURNING *
             `,
-            [event_date, req.params.id, req.session.user_id]
+            [event_date, event_time || null, req.params.id, req.session.user_id]
         );
 
         if (result.rows.length === 0) {
