@@ -4,7 +4,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
 const rateLimit = require("express-rate-limit");
+const pool = require("./db/database");
 
 const authRoutes = require("./routes/auth");
 const petRoutes = require("./routes/pets");
@@ -67,6 +69,13 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
+    // Without a real store, express-session keeps sessions in server RAM —
+    // wiped on every restart, which on Render's free tier means every
+    // idle-spin-down effectively logs everyone out regardless of the cookie's
+    // maxAge below. Storing sessions in Postgres (same DB we already have)
+    // makes them survive restarts; createTableIfMissing sets up the
+    // "session" table itself, no manual migration needed.
+    store: new pgSession({ pool, createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET || "pet-nfc-secret-key",
     resave: false,
     saveUninitialized: false,

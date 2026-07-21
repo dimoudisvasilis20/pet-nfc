@@ -3,6 +3,10 @@
 --   createdb pet_nfc
 --   psql -d pet_nfc -f db/schema.sql
 
+-- Note: a "session" table also exists, holding login sessions (server.js) —
+-- not created here since connect-pg-simple manages its own schema for it
+-- (createTableIfMissing: true), created automatically on first server boot.
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
