@@ -9,12 +9,15 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(30),
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255), -- NULL for accounts created via Google sign-in (no password to check)
     role VARCHAR(20) NOT NULL DEFAULT 'user',        -- 'user' or 'admin'
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    push_token VARCHAR(200) -- Expo push token for the mobile app, NULL until the user grants notification permission
+    push_token VARCHAR(200), -- Expo push token for the mobile app, NULL until the user grants notification permission
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verification_token VARCHAR(100),
+    google_id VARCHAR(100) -- Google account id, set once the user signs in with Google; links/creates the account
 );
 
 CREATE TABLE IF NOT EXISTS pets (
@@ -109,6 +112,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 -- impossible for two user rows to hold the same token at once (which would
 -- mean one device receiving another account's notifications).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_push_token_unique ON users(push_token) WHERE push_token IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id_unique ON users(google_id) WHERE google_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_pets_user_id ON pets(user_id);
 CREATE INDEX IF NOT EXISTS idx_pets_is_lost ON pets(is_lost);

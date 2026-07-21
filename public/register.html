@@ -56,6 +56,12 @@
 
 <p id="result" class="result-msg"></p>
 
+<div class="auth-divider"><span>ή</span></div>
+
+<a href="/auth/google" class="btn btn-outline btn-google">
+<img src="/img/google-icon.svg" alt="" width="18" height="18"> Εγγραφή με Google
+</a>
+
 <p class="subtext">Έχεις ήδη λογαριασμό; <a href="/login.html">Σύνδεση</a></p>
 
 </div>
@@ -86,7 +92,9 @@ async function register(){
 
     const resultEl = document.getElementById("result");
     resultEl.className = response.ok ? "result-msg success" : "result-msg error";
-    resultEl.innerHTML = text;
+    resultEl.innerHTML = response.ok
+        ? "Ο λογαριασμός δημιουργήθηκε! Έλεγξε το email σου για να τον επιβεβαιώσεις."
+        : text;
 
 }
 

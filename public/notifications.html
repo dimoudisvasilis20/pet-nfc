@@ -30,6 +30,7 @@
 <div class="app-main">
 
 <div class="page-topbar">
+<a class="brand" href="/dashboard.html"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</a>
 <button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
 </div>
 
@@ -150,12 +151,28 @@ async function openNotification(id){
 
     const data = notificationData[id];
 
-    if(data && data.type === "location_shared" && data.lat && data.lng){
+    if(!data) return;
+
+    if(data.type === "location_shared" && data.lat && data.lng){
 
         pendingLocation = { lat: data.lat, lng: data.lng };
         document.getElementById("location-choice-overlay").style.display = "flex";
+        return;
 
     }
+
+    if(data.type === "nfc_scan"){
+        window.location.href = "/scans.html";
+        return;
+    }
+
+    if(data.type === "lost_nearby"){
+        window.location.href = "/lost-pets.html";
+        return;
+    }
+
+    // Anything else (calendar_reminder, or an unrecognized future type)
+    // has nowhere more specific to go — stay on this page.
 
 }
 
@@ -185,6 +202,8 @@ function openLocationChoice(mode){
 loadNotifications();
 
 </script>
+
+<script src="/js/sidebar-toggle.js"></script>
 
 </body>
 </html>

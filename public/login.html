@@ -41,6 +41,12 @@
 
 <p id="result" class="result-msg"></p>
 
+<div class="auth-divider"><span>ή</span></div>
+
+<a href="/auth/google" class="btn btn-outline btn-google">
+<img src="/img/google-icon.svg" alt="" width="18" height="18"> Σύνδεση με Google
+</a>
+
 <p class="subtext">Δεν έχεις λογαριασμό; <a href="/register.html">Εγγραφή</a></p>
 
 </div>
@@ -64,11 +70,11 @@ async function login(){
         body:JSON.stringify(data)
     });
 
-    const result = await response.json();
-
     const resultEl = document.getElementById("result");
 
     if(response.ok){
+
+        const result = await response.json();
 
         resultEl.className = "result-msg success";
         resultEl.innerHTML = "Καλώς ήρθες " + result.name;
@@ -78,10 +84,21 @@ async function login(){
     }
     else{
 
+        // Login errors come back as plain text (res.send), not JSON.
+        const message = await response.text();
+
         resultEl.className = "result-msg error";
-        resultEl.innerHTML = "Λάθος στοιχεία";
+        resultEl.innerHTML = message || "Λάθος στοιχεία";
 
     }
+
+}
+
+if(new URLSearchParams(window.location.search).get("error") === "google"){
+
+    const resultEl = document.getElementById("result");
+    resultEl.className = "result-msg error";
+    resultEl.innerHTML = "Η σύνδεση με Google απέτυχε. Δοκίμασε ξανά.";
 
 }
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>PawTrace — Επιβεβαίωση email</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="auth-wrapper">
+<div class="auth-shell">
+
+<div class="auth-hero">
+<h2 class="brand-h2"><img class="brand-mark" src="/img/brand-mark.svg" alt=""> PawTrace</h2>
+<p>Το ψηφιακό προφίλ του κατοικιδίου σου, πάντα ένα σκανάρισμα μακριά.</p>
+</div>
+
+<div class="auth-form-side">
+<div class="auth-card">
+
+<div class="auth-brand-mobile"><img class="brand-mark" src="/img/brand-mark.svg" alt=""> PawTrace</div>
+
+<h1 id="title">Επιβεβαίωση email...</h1>
+
+<p id="result" class="result-msg"></p>
+
+<p class="subtext"><a href="/login.html">Πήγαινε στη σύνδεση</a></p>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+async function verifyEmail(){
+
+    const token = new URLSearchParams(window.location.search).get("token");
+    const titleEl = document.getElementById("title");
+    const resultEl = document.getElementById("result");
+
+    if(!token){
+        titleEl.innerHTML = "❌ Μη έγκυρος σύνδεσμος";
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = "Λείπει το token επιβεβαίωσης.";
+        return;
+    }
+
+    const response = await fetch(`/verify-email?token=${encodeURIComponent(token)}`);
+    const result = await response.json();
+
+    if(response.ok){
+        titleEl.innerHTML = "✅ Το email επιβεβαιώθηκε!";
+        resultEl.className = "result-msg success";
+        resultEl.innerHTML = "Μπορείς τώρα να συνδεθείς κανονικά.";
+    }
+    else{
+        titleEl.innerHTML = "❌ Η επιβεβαίωση απέτυχε";
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = result.message || "Κάτι πήγε στραβά.";
+    }
+
+}
+
+verifyEmail();
+
+</script>
+
+</body>
+</html>

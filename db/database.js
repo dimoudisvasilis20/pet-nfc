@@ -122,6 +122,29 @@ pool.connect()
 
         }
 
+        try {
+
+            // password is nullable now — Google-signed-in accounts have none.
+            await pool.query("ALTER TABLE users ALTER COLUMN password DROP NOT NULL");
+            await pool.query(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE"
+            );
+            await pool.query(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(100)"
+            );
+            await pool.query(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100)"
+            );
+            await pool.query(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id_unique ON users(google_id) WHERE google_id IS NOT NULL"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (users email verification / google_id):", error.message);
+
+        }
+
     })
     .catch((error) => {
 
