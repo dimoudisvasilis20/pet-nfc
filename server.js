@@ -5,6 +5,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
+const cookieSignature = require("cookie-signature");
 const rateLimit = require("express-rate-limit");
 const pool = require("./db/database");
 
@@ -68,6 +69,30 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// The mobile app's cookie jar doesn't reliably survive an app restart (a
+// known React Native limitation — browsers don't have this problem). As a
+// fallback, it stores the raw session id itself and resends it as this
+// header; translate that back into the same signed cookie format
+// express-session expects, so it loads the existing session exactly as a
+// real cookie would. Only kicks in when there's no real cookie already —
+// the website never sends this header, so it's unaffected.
+const SESSION_SECRET = process.env.SESSION_SECRET || "pet-nfc-secret-key";
+
+app.use((req, res, next) => {
+
+    const mobileSessionId = req.headers["x-session-id"];
+
+    if (mobileSessionId && !req.headers.cookie) {
+
+        const signed = "s:" + cookieSignature.sign(mobileSessionId, SESSION_SECRET);
+        req.headers.cookie = `connect.sid=${encodeURIComponent(signed)}`;
+
+    }
+
+    next();
+
+});
+
 app.use(session({
     // Without a real store, express-session keeps sessions in server RAM —
     // wiped on every restart, which on Render's free tier means every
@@ -76,7 +101,7 @@ app.use(session({
     // makes them survive restarts; createTableIfMissing sets up the
     // "session" table itself, no manual migration needed.
     store: new pgSession({ pool, createTableIfMissing: true }),
-    secret: process.env.SESSION_SECRET || "pet-nfc-secret-key",
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

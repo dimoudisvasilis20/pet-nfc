@@ -188,7 +188,8 @@ router.post("/auth/google/mobile", async (req, res) => {
             message: "Login successful",
             user_id: user.id,
             name: user.first_name,
-            role: user.role
+            role: user.role,
+            session_token: req.sessionID
         });
 
     } catch (error) {
@@ -248,7 +249,12 @@ router.post("/login", async (req, res) => {
             message: "Login successful",
             user_id: user.id,
             name: user.first_name,
-            role: user.role
+            role: user.role,
+            // The mobile app's cookie jar can't be relied on across app
+            // restarts — it resends this as a header instead, so include it
+            // for every client (harmless for the website, which sticks with
+            // the cookie). See server.js for how it's read back.
+            session_token: req.sessionID
         });
 
     } catch (error) {
