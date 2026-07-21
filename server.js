@@ -2,7 +2,9 @@ require("dotenv").config({ quiet: true }); // suppresses dotenv's promotional co
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const session = require("express-session");
+const rateLimit = require("express-rate-limit");
 
 const authRoutes = require("./routes/auth");
 const petRoutes = require("./routes/pets");
@@ -19,9 +21,48 @@ const { sendDueCalendarReminders } = require("./utils/calendarReminders");
 
 const app = express();
 
+// Render sets this on every service automatically — a more reliable "are we
+// live" signal than NODE_ENV, which nothing here ever sets.
+const isProduction = !!process.env.RENDER;
+
+// Render (like most PaaS) puts the app behind a reverse proxy — without this,
+// every request looks like it comes from that proxy's own IP, not the real
+// client. That would make the rate limiter below key everyone off the same
+// "IP", so one abusive client could lock out every other user.
+if (isProduction) {
+    app.set("trust proxy", 1);
+}
+
+app.use(helmet({
+    // The site's pages all use plain inline <script> blocks (no nonces/hashes
+    // set up) — helmet's default CSP would block every one of them. The rest
+    // of helmet's headers (X-Content-Type-Options, X-Frame-Options, HSTS,
+    // etc.) don't require any of that, so keep those and skip only CSP.
+    contentSecurityPolicy: false,
+}));
+
+// Only these origins can make credentialed (cookie-bearing) requests —
+// keeps a malicious third-party site from riding a logged-in user's session
+// via CORS. Requests with no Origin header (the native mobile app, curl,
+// server-to-server) aren't browser-mediated so this check doesn't apply to
+// them regardless.
+const ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8082",
+    "https://pet-nfc-6863.onrender.com",
+];
+
 app.use(cors({
-    origin: true,      // reflect the request's Origin so credentials (session cookie) are allowed
-    credentials: true   // needed by the mobile app (Expo web / native), which calls the API cross-origin
+    origin: (origin, callback) => {
+
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+
+        callback(new Error("Not allowed by CORS"));
+
+    },
+    credentials: true
 }));
 app.use(express.json());
 
@@ -30,9 +71,25 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        httpOnly: true,                   // not readable from page JS
+        secure: isProduction,             // HTTPS-only in production; localhost dev is plain HTTP
+        sameSite: "lax",                  // cookie isn't sent on cross-site requests (blocks CSRF-by-fetch)
     }
 }));
+
+// Slows down credential-guessing against login/register/Google sign-in —
+// generous enough not to bother a real user mistyping their password a few
+// times, strict enough to make scripted brute-forcing impractical.
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Πολλές προσπάθειες — δοκίμασε ξανά σε λίγα λεπτά.",
+});
+
+app.use(["/login", "/register", "/auth/google/mobile"], authLimiter);
 
 // Static frontend (login.html, dashboard.html, add-pet.html, lost-pets.html, admin/...)
 app.use(express.static("public"));
