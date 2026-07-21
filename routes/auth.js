@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const pool = require("../db/database");
 const { sendWelcomeEmail } = require("../utils/email");
-const { getGoogleAuthUrl, getGoogleProfile } = require("../utils/googleAuth");
+const { getGoogleAuthUrl, getGoogleProfile, verifyGoogleIdToken, findOrCreateGoogleUser } = require("../utils/googleAuth");
 
 const router = express.Router();
 
@@ -149,52 +149,7 @@ router.get("/auth/google/callback", async (req, res) => {
     try {
 
         const profile = await getGoogleProfile(code);
-
-        let result = await pool.query(
-            "SELECT * FROM users WHERE google_id = $1",
-            [profile.sub]
-        );
-
-        if (result.rows.length === 0) {
-
-            // No account with this Google id yet — link it to an existing
-            // account with the same email (Google already verified that
-            // email belongs to whoever is signing in), or create a new one.
-            const existingByEmail = await pool.query(
-                "SELECT * FROM users WHERE email = $1",
-                [profile.email]
-            );
-
-            if (existingByEmail.rows.length > 0) {
-
-                result = await pool.query(
-                    `
-                    UPDATE users
-                    SET google_id = $1, email_verified = TRUE
-                    WHERE id = $2
-                    RETURNING *
-                    `,
-                    [profile.sub, existingByEmail.rows[0].id]
-                );
-
-            } else {
-
-                result = await pool.query(
-                    `
-                    INSERT INTO users
-                    (first_name, last_name, email, password, status, google_id, email_verified)
-                    VALUES
-                    ($1, $2, $3, NULL, 'active', $4, TRUE)
-                    RETURNING *
-                    `,
-                    [profile.given_name || "Χρήστης", profile.family_name || "", profile.email, profile.sub]
-                );
-
-            }
-
-        }
-
-        const user = result.rows[0];
+        const user = await findOrCreateGoogleUser(pool, profile);
 
         req.session.user_id = user.id;
 
@@ -204,6 +159,42 @@ router.get("/auth/google/callback", async (req, res) => {
 
         console.log(error);
         res.redirect("/login.html?error=google");
+
+    }
+
+});
+
+// Mobile: the app signs in with the native Google Sign-In SDK itself (no
+// redirect through us) and just hands over the resulting ID token here to
+// establish the same kind of session the website's redirect flow creates.
+router.post("/auth/google/mobile", async (req, res) => {
+
+    const { idToken } = req.body;
+
+    if (!idToken) {
+
+        return res.status(400).send("idToken is required");
+
+    }
+
+    try {
+
+        const profile = await verifyGoogleIdToken(idToken);
+        const user = await findOrCreateGoogleUser(pool, profile);
+
+        req.session.user_id = user.id;
+
+        res.json({
+            message: "Login successful",
+            user_id: user.id,
+            name: user.first_name,
+            role: user.role
+        });
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(401).send("Google sign-in failed");
 
     }
 

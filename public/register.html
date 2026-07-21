@@ -52,6 +52,11 @@
 <input id="password" type="password" placeholder="Κωδικός">
 </div>
 
+<label class="terms-check">
+<input type="checkbox" id="terms_accept">
+<span>Αποδέχομαι τους <a href="/terms.html" target="_blank" rel="noopener">Όρους Χρήσης</a> και την <a href="/privacy.html" target="_blank" rel="noopener">Πολιτική Απορρήτου</a></span>
+</label>
+
 <button class="btn" onclick="register()">Εγγραφή</button>
 
 <p id="result" class="result-msg"></p>
@@ -74,6 +79,14 @@
 
 async function register(){
 
+    const resultEl = document.getElementById("result");
+
+    if(!document.getElementById("terms_accept").checked){
+        resultEl.className = "result-msg error";
+        resultEl.innerHTML = "Χρειάζεται να αποδεχτείς τους Όρους Χρήσης και την Πολιτική Απορρήτου";
+        return;
+    }
+
     const data={
         first_name: document.getElementById("first_name").value,
         last_name: document.getElementById("last_name").value,
@@ -90,7 +103,6 @@ async function register(){
 
     const text = await response.text();
 
-    const resultEl = document.getElementById("result");
     resultEl.className = response.ok ? "result-msg success" : "result-msg error";
     resultEl.innerHTML = response.ok
         ? "Ο λογαριασμός δημιουργήθηκε! Έλεγξε το email σου για να τον επιβεβαιώσεις."

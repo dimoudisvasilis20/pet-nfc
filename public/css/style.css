@@ -380,6 +380,34 @@ a{
     width:100%;
 }
 
+.terms-check{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:16px;
+    font-size:13px;
+    color:var(--color-text-muted);
+    line-height:1.4;
+    cursor:pointer;
+}
+
+.terms-check input{
+    width:16px;
+    height:16px;
+    margin:2px 0 0;
+    flex-shrink:0;
+}
+
+.terms-check span{
+    flex:1;
+    min-width:0;
+}
+
+.terms-check a{
+    color:var(--color-primary);
+    font-weight:600;
+}
+
 @media (max-width:760px){
     .auth-hero{
         display:none;
