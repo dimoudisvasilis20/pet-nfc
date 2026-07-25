@@ -6,6 +6,7 @@ const requireLogin = require("../middleware/auth");
 const { distanceKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notify");
 const { uploadPhoto, deletePhoto } = require("../utils/storage");
+const { getAccessiblePetOwnerId } = require("../utils/petAccess");
 
 const router = express.Router();
 
@@ -165,11 +166,17 @@ router.get("/pets", requireLogin, async (req, res) => {
                 pets.*,
                 tags.public_code,
                 tags.serial_number,
-                tags.status AS tag_status
+                tags.status AS tag_status,
+                (pets.user_id != $1) AS is_shared,
+                owner.first_name AS owner_first_name,
+                owner.last_name AS owner_last_name
             FROM pets
             LEFT JOIN tags
             ON pets.id = tags.pet_id
+            JOIN users owner
+            ON owner.id = pets.user_id
             WHERE pets.user_id = $1
+            OR pets.user_id IN (SELECT owner_id FROM pet_shares WHERE member_id = $1)
             ORDER BY pets.id DESC
             `,
             [req.session.user_id]
@@ -208,6 +215,14 @@ router.get("/pets/:id", requireLogin, async (req, res) => {
 
     try {
 
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.session.user_id);
+
+        if (!ownerId) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
         const result = await pool.query(
             `
             SELECT
@@ -223,7 +238,7 @@ router.get("/pets/:id", requireLogin, async (req, res) => {
             `,
             [
                 req.params.id,
-                req.session.user_id
+                ownerId
             ]
         );
 
@@ -271,9 +286,17 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
 
     try {
 
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.session.user_id);
+
+        if (!ownerId) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
         const existing = await pool.query(
             "SELECT * FROM pets WHERE id=$1 AND user_id=$2",
-            [req.params.id, req.session.user_id]
+            [req.params.id, ownerId]
         );
 
         if (existing.rows.length === 0) {
@@ -354,7 +377,7 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
                 vet_phone,
                 photo,
                 req.params.id,
-                req.session.user_id,
+                ownerId,
                 detailsChanged
             ]
         );
@@ -395,9 +418,17 @@ router.post("/pets/:id/photo", requireLoginOrUploadToken, photoUpload.single("ph
 
     try {
 
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.uploadUserId);
+
+        if (!ownerId) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
         const existing = await pool.query(
             "SELECT photo FROM pets WHERE id=$1 AND user_id=$2",
-            [req.params.id, req.uploadUserId]
+            [req.params.id, ownerId]
         );
 
         if (existing.rows.length === 0) {
@@ -411,7 +442,7 @@ router.post("/pets/:id/photo", requireLoginOrUploadToken, photoUpload.single("ph
 
         const result = await pool.query(
             "UPDATE pets SET photo=$1 WHERE id=$2 AND user_id=$3 RETURNING *",
-            [photo, req.params.id, req.uploadUserId]
+            [photo, req.params.id, ownerId]
         );
 
         if (oldPhoto) {
@@ -558,28 +589,44 @@ every opted-in user within THEIR chosen radius.
 
 router.post("/pets/:id/lost", requireLogin, async (req, res) => {
 
-    const { lat, lng } = req.body;
+    // Every field here is optional per the lost-report modal — the owner may
+    // not know exactly when/where the pet went missing, or may not want to
+    // offer a reward. lat/lng, if given, must be a real pair (one without the
+    // other can't be used to compute distances below).
+    const { lat, lng, missing_at, reward } = req.body;
 
-    if (typeof lat !== "number" || typeof lng !== "number") {
+    const hasLat = typeof lat === "number";
+    const hasLng = typeof lng === "number";
 
-        return res.status(400).send("lat and lng (numbers) are required");
+    if (hasLat !== hasLng) {
+
+        return res.status(400).send("lat and lng must be provided together");
 
     }
 
     try {
 
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.session.user_id);
+
+        if (!ownerId) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
         const petResult = await pool.query(
             `
             UPDATE pets
             SET is_lost = TRUE,
-                lost_at = NOW(),
-                last_seen_lat = $1,
-                last_seen_lng = $2
-            WHERE id = $3
-            AND user_id = $4
+                lost_at = COALESCE($1::timestamp, NOW()),
+                last_seen_lat = $2,
+                last_seen_lng = $3,
+                reward = $4
+            WHERE id = $5
+            AND user_id = $6
             RETURNING *
             `,
-            [lat, lng, req.params.id, req.session.user_id]
+            [missing_at || null, hasLat ? lat : null, hasLng ? lng : null, reward || null, req.params.id, ownerId]
         );
 
         if (petResult.rows.length === 0) {
@@ -589,35 +636,43 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
         }
 
         const pet = petResult.rows[0];
+        let notifiedCount = 0;
 
-        const nearbyUsers = await pool.query(
-            `
-            SELECT user_id, lat, lng, alert_radius_km
-            FROM user_locations
-            WHERE user_id != $1
-            `,
-            [req.session.user_id]
-        );
+        // Nothing to compute distance from if no location was declared.
+        if (hasLat && hasLng) {
 
-        const toNotify = nearbyUsers.rows.filter(
-            (u) => distanceKm(lat, lng, u.lat, u.lng) <= u.alert_radius_km
-        );
-
-        for (const u of toNotify) {
-
-            await createNotification(
-                u.user_id,
-                "Χαμένο κατοικίδιο κοντά σου",
-                `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`,
-                { type: "lost_nearby" }
+            const nearbyUsers = await pool.query(
+                `
+                SELECT user_id, lat, lng, alert_radius_km
+                FROM user_locations
+                WHERE user_id != $1
+                `,
+                [req.session.user_id]
             );
+
+            const toNotify = nearbyUsers.rows.filter(
+                (u) => distanceKm(lat, lng, u.lat, u.lng) <= u.alert_radius_km
+            );
+
+            for (const u of toNotify) {
+
+                await createNotification(
+                    u.user_id,
+                    "Χαμένο κατοικίδιο κοντά σου",
+                    `Το ${pet.name} (${pet.species || "κατοικίδιο"}) χάθηκε κοντά στην περιοχή σου. Δες τη σελίδα "Χαμένα κατοικίδια" για λεπτομέρειες.`,
+                    { type: "lost_nearby" }
+                );
+
+            }
+
+            notifiedCount = toNotify.length;
 
         }
 
         res.json({
             message: "Pet marked as lost",
             pet,
-            notified: toNotify.length
+            notified: notifiedCount
         });
 
     } catch (error) {
@@ -639,16 +694,25 @@ router.post("/pets/:id/found", requireLogin, async (req, res) => {
 
     try {
 
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.session.user_id);
+
+        if (!ownerId) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
         const result = await pool.query(
             `
             UPDATE pets
             SET is_lost = FALSE,
-                lost_at = NULL
+                lost_at = NULL,
+                reward = NULL
             WHERE id = $1
             AND user_id = $2
             RETURNING *
             `,
-            [req.params.id, req.session.user_id]
+            [req.params.id, ownerId]
         );
 
         if (result.rows.length === 0) {
@@ -758,12 +822,9 @@ router.post("/pets/:id/tag", requireLogin, async (req, res) => {
 
     try {
 
-        const petCheck = await pool.query(
-            "SELECT id FROM pets WHERE id=$1 AND user_id=$2",
-            [req.params.id, req.session.user_id]
-        );
+        const ownerId = await getAccessiblePetOwnerId(req.params.id, req.session.user_id);
 
-        if (petCheck.rows.length === 0) {
+        if (!ownerId) {
 
             return res.status(404).send("Pet not found");
 

@@ -48,6 +48,11 @@
 </div>
 
 <div class="field">
+<label for="alt_phone">Εναλλακτικό τηλέφωνο (προαιρετικό)</label>
+<input id="alt_phone" placeholder="Εναλλακτικό τηλέφωνο">
+</div>
+
+<div class="field">
 <label for="password">Κωδικός</label>
 <input id="password" type="password" placeholder="Κωδικός">
 </div>
@@ -92,6 +97,7 @@ async function register(){
         last_name: document.getElementById("last_name").value,
         email: document.getElementById("email").value,
         phone: document.getElementById("phone").value,
+        alt_phone: document.getElementById("alt_phone").value,
         password: document.getElementById("password").value
     };
 

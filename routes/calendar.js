@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
+const { getAccessiblePetOwnerId } = require("../utils/petAccess");
 
 const router = express.Router();
 
@@ -46,7 +47,8 @@ router.get("/calendar-events", requireLogin, async (req, res) => {
             FROM calendar_events
             JOIN pets
             ON calendar_events.pet_id = pets.id
-            WHERE calendar_events.user_id = $1
+            WHERE pets.user_id = $1
+            OR pets.user_id IN (SELECT owner_id FROM pet_shares WHERE member_id = $1)
             ORDER BY calendar_events.event_date ASC
             `,
             [req.session.user_id]
@@ -83,12 +85,9 @@ router.post("/calendar-events", requireLogin, async (req, res) => {
 
     try {
 
-        const petCheck = await pool.query(
-            "SELECT id FROM pets WHERE id=$1 AND user_id=$2",
-            [pet_id, req.session.user_id]
-        );
+        const ownerId = await getAccessiblePetOwnerId(pet_id, req.session.user_id);
 
-        if (petCheck.rows.length === 0) {
+        if (!ownerId) {
 
             return res.status(404).send("Pet not found");
 
@@ -173,13 +172,15 @@ router.put("/calendar-events/:id/reschedule", requireLogin, async (req, res) => 
 
         const result = await pool.query(
             `
-            UPDATE calendar_events
+            UPDATE calendar_events ce
             SET event_date=$1,
-                event_time=COALESCE($2, event_time),
+                event_time=COALESCE($2, ce.event_time),
                 updated_at=NOW()
-            WHERE id=$3
-            AND user_id=$4
-            RETURNING *
+            FROM pets p
+            WHERE ce.id=$3
+            AND ce.pet_id = p.id
+            AND (p.user_id = $4 OR p.user_id IN (SELECT owner_id FROM pet_shares WHERE member_id = $4))
+            RETURNING ce.*
             `,
             [event_date, event_time || null, req.params.id, req.session.user_id]
         );
@@ -216,12 +217,14 @@ router.put("/calendar-events/:id/complete", requireLogin, async (req, res) => {
 
         const result = await pool.query(
             `
-            UPDATE calendar_events
+            UPDATE calendar_events ce
             SET status='completed',
                 updated_at=NOW()
-            WHERE id=$1
-            AND user_id=$2
-            RETURNING *
+            FROM pets p
+            WHERE ce.id=$1
+            AND ce.pet_id = p.id
+            AND (p.user_id = $2 OR p.user_id IN (SELECT owner_id FROM pet_shares WHERE member_id = $2))
+            RETURNING ce.*
             `,
             [req.params.id, req.session.user_id]
         );
@@ -258,9 +261,11 @@ router.delete("/calendar-events/:id", requireLogin, async (req, res) => {
 
         await pool.query(
             `
-            DELETE FROM calendar_events
-            WHERE id=$1
-            AND user_id=$2
+            DELETE FROM calendar_events ce
+            USING pets p
+            WHERE ce.id=$1
+            AND ce.pet_id = p.id
+            AND (p.user_id = $2 OR p.user_id IN (SELECT owner_id FROM pet_shares WHERE member_id = $2))
             `,
             [req.params.id, req.session.user_id]
         );

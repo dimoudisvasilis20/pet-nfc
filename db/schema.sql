@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(30),
+    alt_phone VARCHAR(30), -- optional backup contact number, shown on the public pet page if the first doesn't answer
     password VARCHAR(255), -- NULL for accounts created via Google sign-in (no password to check)
     role VARCHAR(20) NOT NULL DEFAULT 'user',        -- 'user' or 'admin'
     status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS pets (
     lost_at TIMESTAMP,
     last_seen_lat DOUBLE PRECISION,
     last_seen_lng DOUBLE PRECISION,
+    reward VARCHAR(100), -- optional free-text reward offered, e.g. "50€"
 
     -- last time the pet's own details (not photo) were edited; NULL = never.
     -- Details can only be edited once every 6 months — see PUT /pets/:id.
@@ -126,6 +128,20 @@ CREATE INDEX IF NOT EXISTS idx_scan_history_tag_id ON scan_history(tag_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_user_id ON calendar_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_event_date ON calendar_events(event_date);
+
+-- Grants member_id full co-owner access to owner_id's pets (manage details,
+-- appointments, lost/found) — added via "Οικογενειακή διαχείριση", instant,
+-- no invite/accept step (member just needs an existing account by email).
+CREATE TABLE IF NOT EXISTS pet_shares (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(owner_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pet_shares_owner_id ON pet_shares(owner_id);
+CREATE INDEX IF NOT EXISTS idx_pet_shares_member_id ON pet_shares(member_id);
 
 -- First account you register becomes a regular user; promote yourself to admin with:
 --   UPDATE users SET role = 'admin' WHERE email = 'you@example.com';

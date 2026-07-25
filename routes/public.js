@@ -53,11 +53,14 @@ router.get("/p/:code", async (req, res) => {
             pets.breed,
             pets.photo,
             pets.medical_notes,
+            pets.is_lost,
+            pets.reward,
 
             users.id AS user_id,
             users.first_name,
             users.last_name,
-            users.phone
+            users.phone,
+            users.alt_phone
 
         FROM tags
 
@@ -299,13 +302,58 @@ font-size:14px;
 
 }
 
+.scan-card.lost{
+
+border:2px solid var(--color-danger);
+background:var(--color-danger-light);
+
+}
+
+.lost-banner{
+
+margin-bottom:16px;
+
+padding:12px 16px;
+
+background:var(--color-danger);
+color:#fff;
+
+border-radius:var(--radius-sm);
+
+font-weight:700;
+
+}
+
+.lost-banner .reward{
+
+margin-top:4px;
+font-weight:600;
+font-size:14px;
+
+}
+
+.alt-phone{
+
+margin-top:10px;
+font-size:13px;
+color:var(--color-text-muted);
+
+}
+
 </style>
 
 </head>
 
 <body>
 
-<div class="card scan-card">
+<div class="card scan-card${pet.is_lost ? " lost" : ""}">
+
+${pet.is_lost ? `
+<div class="lost-banner">
+🚨 ΧΑΜΕΝΟ — βοηθήστε το να γυρίσει σπίτι
+${pet.reward ? `<div class="reward">🎁 Αμοιβή: ${pet.reward}</div>` : ""}
+</div>
+` : ""}
 
 ${pet.photo ? `<img class="scan-photo" src="${pet.photo}" alt="${pet.pet_name}">` : `<div class="scan-photo-placeholder">🐾</div>`}
 
@@ -342,6 +390,17 @@ href="tel:${pet.phone}">
 📞 Κλήση ιδιοκτήτη
 
 </a>
+
+${pet.alt_phone ? `
+<a
+class="btn btn-outline"
+style="margin-top:10px;width:100%;"
+href="tel:${pet.alt_phone}">
+
+📞 Δεύτερο τηλέφωνο (αν δεν απαντήσει το πρώτο)
+
+</a>
+` : ""}
 
 <button
 type="button"

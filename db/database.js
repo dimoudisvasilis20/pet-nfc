@@ -145,6 +145,41 @@ pool.connect()
 
         }
 
+        try {
+
+            await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS alt_phone VARCHAR(30)");
+            await pool.query("ALTER TABLE pets ADD COLUMN IF NOT EXISTS reward VARCHAR(100)");
+
+        } catch (error) {
+
+            console.log("❌ Migration error (users.alt_phone / pets.reward):", error.message);
+
+        }
+
+        try {
+
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS pet_shares (
+                    id SERIAL PRIMARY KEY,
+                    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    UNIQUE(owner_id, member_id)
+                )
+            `);
+            await pool.query(
+                "CREATE INDEX IF NOT EXISTS idx_pet_shares_owner_id ON pet_shares(owner_id)"
+            );
+            await pool.query(
+                "CREATE INDEX IF NOT EXISTS idx_pet_shares_member_id ON pet_shares(member_id)"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pet_shares table):", error.message);
+
+        }
+
     })
     .catch((error) => {
 

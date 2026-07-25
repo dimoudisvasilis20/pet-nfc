@@ -23,6 +23,7 @@ router.get("/me", requireLogin, async (req, res) => {
                 users.last_name,
                 users.email,
                 users.phone,
+                users.alt_phone,
                 users.created_at,
                 (users.push_token IS NOT NULL) AS push_enabled,
                 (user_locations.user_id IS NOT NULL) AS location_shared
@@ -59,7 +60,7 @@ UPDATE MY PROFILE
 
 router.put("/me", requireLogin, async (req, res) => {
 
-    const { first_name, last_name, email, phone } = req.body;
+    const { first_name, last_name, email, phone, alt_phone } = req.body;
 
     try {
 
@@ -71,11 +72,12 @@ router.put("/me", requireLogin, async (req, res) => {
                 last_name = $2,
                 email = $3,
                 phone = $4,
+                alt_phone = $5,
                 updated_at = NOW()
-            WHERE id = $5
-            RETURNING id, first_name, last_name, email, phone, created_at
+            WHERE id = $6
+            RETURNING id, first_name, last_name, email, phone, alt_phone, created_at
             `,
-            [first_name, last_name, email, phone, req.session.user_id]
+            [first_name, last_name, email, phone, alt_phone || null, req.session.user_id]
         );
 
         res.json({
@@ -243,6 +245,113 @@ router.put("/me/push-token", requireLogin, async (req, res) => {
 
         console.log(error);
         res.status(500).send("Push token error");
+
+    }
+
+});
+
+/*
+========================================
+FAMILY MANAGEMENT (pet_shares)
+Members added here get full co-owner access
+to every one of my pets — instantly, no
+invite/accept step, as long as their email
+already has an account with us.
+========================================
+*/
+
+router.get("/me/family", requireLogin, async (req, res) => {
+
+    try {
+
+        const result = await pool.query(
+            `
+            SELECT users.id, users.first_name, users.last_name, users.email
+            FROM pet_shares
+            JOIN users ON users.id = pet_shares.member_id
+            WHERE pet_shares.owner_id = $1
+            ORDER BY pet_shares.created_at ASC
+            `,
+            [req.session.user_id]
+        );
+
+        res.json(result.rows);
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).send("Family list error");
+
+    }
+
+});
+
+router.post("/me/family", requireLogin, async (req, res) => {
+
+    const { email } = req.body;
+
+    if (!email) {
+
+        return res.status(400).send("Το email είναι υποχρεωτικό");
+
+    }
+
+    try {
+
+        const targetUser = await pool.query(
+            "SELECT id, first_name, last_name, email FROM users WHERE email = $1",
+            [email]
+        );
+
+        if (targetUser.rows.length === 0) {
+
+            return res.status(404).send("Δεν υπάρχει λογαριασμός με αυτό το email");
+
+        }
+
+        const member = targetUser.rows[0];
+
+        if (String(member.id) === String(req.session.user_id)) {
+
+            return res.status(400).send("Δεν μπορείς να προσθέσεις τον εαυτό σου");
+
+        }
+
+        await pool.query(
+            `
+            INSERT INTO pet_shares (owner_id, member_id)
+            VALUES ($1, $2)
+            ON CONFLICT (owner_id, member_id) DO NOTHING
+            `,
+            [req.session.user_id, member.id]
+        );
+
+        res.json({ message: "Μέλος προστέθηκε", member });
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).send("Family add error");
+
+    }
+
+});
+
+router.delete("/me/family/:memberId", requireLogin, async (req, res) => {
+
+    try {
+
+        await pool.query(
+            "DELETE FROM pet_shares WHERE owner_id = $1 AND member_id = $2",
+            [req.session.user_id, req.params.memberId]
+        );
+
+        res.json({ message: "Μέλος αφαιρέθηκε" });
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).send("Family remove error");
 
     }
 

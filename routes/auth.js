@@ -20,6 +20,7 @@ router.post("/register", async (req, res) => {
         last_name,
         email,
         phone,
+        alt_phone,
         password
     } = req.body;
 
@@ -36,13 +37,14 @@ router.post("/register", async (req, res) => {
                 last_name,
                 email,
                 phone,
+                alt_phone,
                 password,
                 status,
                 email_verification_token
             )
             VALUES
             (
-                $1,$2,$3,$4,$5,'active',$6
+                $1,$2,$3,$4,$5,$6,'active',$7
             )
             `,
             [
@@ -50,6 +52,7 @@ router.post("/register", async (req, res) => {
                 last_name,
                 email,
                 phone,
+                alt_phone || null,
                 hashedPassword,
                 verificationToken
             ]
