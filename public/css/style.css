@@ -696,6 +696,21 @@ textarea{
     font-size:14px;
 }
 
+.lost-meta{
+    color:var(--color-text-muted);
+    font-size:13px;
+    margin-top:4px;
+}
+
+.lost-meta a{
+    color:var(--color-primary);
+}
+
+.lost-meta.reward{
+    color:var(--color-danger);
+    font-weight:600;
+}
+
 .empty-state{
     text-align:center;
     color:var(--color-text-muted);

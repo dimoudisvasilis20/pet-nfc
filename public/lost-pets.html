@@ -112,6 +112,12 @@ ${pet.photo ? `<img class="pet-card-photo" src="${pet.photo}" alt="${pet.name}">
 
 <div class="distance">${pet.species || ""} ${pet.breed ? "· " + pet.breed : ""} · ${pet.distance_km.toFixed(1)} χλμ μακριά</div>
 
+${pet.lost_at ? `<div class="lost-meta">🕒 Εξαφανίστηκε: ${new Date(pet.lost_at).toLocaleString("el-GR", { dateStyle: "medium", timeStyle: "short" })}</div>` : ""}
+
+<div class="lost-meta">📍 <a href="https://www.google.com/maps?q=${pet.last_seen_lat},${pet.last_seen_lng}" target="_blank" rel="noopener">Τελευταία γνωστή τοποθεσία</a></div>
+
+${pet.reward ? `<div class="lost-meta reward">🎁 Αμοιβή: ${pet.reward}</div>` : ""}
+
 </div>
 
 </div>

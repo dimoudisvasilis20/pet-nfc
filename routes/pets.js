@@ -771,7 +771,8 @@ router.get("/pets/lost/nearby", async (req, res) => {
                 pets.photo,
                 pets.last_seen_lat,
                 pets.last_seen_lng,
-                pets.lost_at
+                pets.lost_at,
+                pets.reward
             FROM pets
             WHERE pets.is_lost = TRUE
             AND pets.last_seen_lat IS NOT NULL
