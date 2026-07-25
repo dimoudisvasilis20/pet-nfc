@@ -55,6 +55,9 @@ router.get("/p/:code", async (req, res) => {
             pets.medical_notes,
             pets.is_lost,
             pets.reward,
+            pets.lost_at,
+            pets.last_seen_lat,
+            pets.last_seen_lng,
 
             users.id AS user_id,
             users.first_name,
@@ -202,6 +205,15 @@ router.post("/p/:code/share-location", async (req, res) => {
 
 function buildScanPage(pet, code) {
 
+    const lostAtText = pet.lost_at
+        ? new Date(pet.lost_at).toLocaleString("el-GR", { dateStyle: "medium", timeStyle: "short" })
+        : null;
+
+    const hasLastSeenLocation = pet.last_seen_lat != null && pet.last_seen_lng != null;
+    const mapsUrl = hasLastSeenLocation
+        ? `https://www.google.com/maps?q=${pet.last_seen_lat},${pet.last_seen_lng}`
+        : null;
+
     return `
 <!DOCTYPE html>
 
@@ -332,6 +344,21 @@ font-size:14px;
 
 }
 
+.lost-banner .lost-meta{
+
+margin-top:4px;
+font-weight:500;
+font-size:14px;
+
+}
+
+.lost-banner .lost-meta a{
+
+color:#fff;
+text-decoration:underline;
+
+}
+
 .alt-phone{
 
 margin-top:10px;
@@ -351,6 +378,8 @@ color:var(--color-text-muted);
 ${pet.is_lost ? `
 <div class="lost-banner">
 🚨 ΧΑΜΕΝΟ — βοηθήστε το να γυρίσει σπίτι
+${lostAtText ? `<div class="lost-meta">🕒 Εξαφανίστηκε: ${lostAtText}</div>` : ""}
+${hasLastSeenLocation ? `<div class="lost-meta">📍 <a href="${mapsUrl}" target="_blank" rel="noopener">Τελευταία γνωστή τοποθεσία</a></div>` : ""}
 ${pet.reward ? `<div class="reward">🎁 Αμοιβή: ${pet.reward}</div>` : ""}
 </div>
 ` : ""}
