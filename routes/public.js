@@ -1,8 +1,34 @@
 const express = require("express");
 const pool = require("../db/database");
 const { createNotification } = require("../utils/notify");
+const { getPhotoObject } = require("../utils/storage");
 
 const router = express.Router();
+
+/*
+========================================
+PET PHOTO (proxied from B2 — the bucket is private, so this is the only
+way to actually view a photo; see utils/storage.js)
+========================================
+*/
+
+router.get("/photo/:key", async (req, res) => {
+
+    try {
+
+        const object = await getPhotoObject(req.params.key);
+
+        res.set("Content-Type", object.ContentType || "image/jpeg");
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        object.Body.pipe(res);
+
+    } catch (error) {
+
+        res.status(404).send("Photo not found");
+
+    }
+
+});
 
 /*
 ========================================

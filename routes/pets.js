@@ -1,25 +1,19 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 const crypto = require("crypto");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
 const { distanceKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notify");
+const { uploadPhoto, deletePhoto } = require("../utils/storage");
 
 const router = express.Router();
 
-const photoStorage = multer.diskStorage({
-    destination: path.join(__dirname, "..", "public", "uploads", "pets"),
-    filename: (req, file, cb) => {
-        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        cb(null, `${unique}${path.extname(file.originalname)}`);
-    }
-});
-
-const uploadPhoto = multer({
-    storage: photoStorage,
+// In memory only — the file goes straight to B2 (utils/storage.js) rather
+// than this server's own disk, which Render wipes on every restart/idle
+// spin-down (pet photos were silently disappearing because of this).
+const photoUpload = multer({
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         cb(null, file.mimetype.startsWith("image/"));
@@ -75,7 +69,7 @@ CREATE PET
 ========================================
 */
 
-router.post("/pets", requireLogin, uploadPhoto.single("photo"), async (req, res) => {
+router.post("/pets", requireLogin, photoUpload.single("photo"), async (req, res) => {
 
     const {
         name,
@@ -91,14 +85,14 @@ router.post("/pets", requireLogin, uploadPhoto.single("photo"), async (req, res)
         vet_phone
     } = req.body;
 
-    const photo = req.file
-        ? `/uploads/pets/${req.file.filename}`
-        : null;
-
     const safeBirthDate = birth_date || null;
     const safeWeight = weight === "" || weight === undefined ? null : weight;
 
     try {
+
+        const photo = req.file
+            ? await uploadPhoto(req.file.buffer, req.file.originalname, req.file.mimetype)
+            : null;
 
         const result = await pool.query(
             `
@@ -256,7 +250,7 @@ UPDATE PET
 ========================================
 */
 
-router.put("/pets/:id", requireLogin, uploadPhoto.single("photo"), async (req, res) => {
+router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, res) => {
 
     const {
         name,
@@ -321,7 +315,7 @@ router.put("/pets/:id", requireLogin, uploadPhoto.single("photo"), async (req, r
 
         const oldPhoto = current.photo;
         const photo = req.file
-            ? `/uploads/pets/${req.file.filename}`
+            ? await uploadPhoto(req.file.buffer, req.file.originalname, req.file.mimetype)
             : oldPhoto;
 
         const result = await pool.query(
@@ -367,10 +361,7 @@ router.put("/pets/:id", requireLogin, uploadPhoto.single("photo"), async (req, r
 
         if (req.file && oldPhoto) {
 
-            fs.unlink(
-                path.join(__dirname, "..", "public", oldPhoto),
-                () => {}
-            );
+            deletePhoto(oldPhoto);
 
         }
 
@@ -394,7 +385,7 @@ UPDATE PET PHOTO
 ========================================
 */
 
-router.post("/pets/:id/photo", requireLoginOrUploadToken, uploadPhoto.single("photo"), async (req, res) => {
+router.post("/pets/:id/photo", requireLoginOrUploadToken, photoUpload.single("photo"), async (req, res) => {
 
     if (!req.file) {
 
@@ -416,7 +407,7 @@ router.post("/pets/:id/photo", requireLoginOrUploadToken, uploadPhoto.single("ph
         }
 
         const oldPhoto = existing.rows[0].photo;
-        const photo = `/uploads/pets/${req.file.filename}`;
+        const photo = await uploadPhoto(req.file.buffer, req.file.originalname, req.file.mimetype);
 
         const result = await pool.query(
             "UPDATE pets SET photo=$1 WHERE id=$2 AND user_id=$3 RETURNING *",
@@ -425,10 +416,7 @@ router.post("/pets/:id/photo", requireLoginOrUploadToken, uploadPhoto.single("ph
 
         if (oldPhoto) {
 
-            fs.unlink(
-                path.join(__dirname, "..", "public", oldPhoto),
-                () => {}
-            );
+            deletePhoto(oldPhoto);
 
         }
 
@@ -471,10 +459,7 @@ router.delete("/pets/:id", requireLogin, async (req, res) => {
 
         if (result.rows.length > 0 && result.rows[0].photo) {
 
-            fs.unlink(
-                path.join(__dirname, "..", "public", result.rows[0].photo),
-                () => {}
-            );
+            deletePhoto(result.rows[0].photo);
 
         }
 
