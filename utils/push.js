@@ -4,12 +4,13 @@
 async function sendPushNotification(pushToken, title, body, data = {}, categoryId = null) {
 
     if (!pushToken || !pushToken.startsWith("ExponentPushToken")) {
+        console.log(`⚠️ Push not sent (no/invalid token): "${title}"`);
         return;
     }
 
     try {
 
-        await fetch("https://exp.host/--/api/v2/push/send", {
+        const response = await fetch("https://exp.host/--/api/v2/push/send", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -27,6 +28,17 @@ async function sendPushNotification(pushToken, title, body, data = {}, categoryI
                 ...(categoryId ? { categoryId } : {})
             })
         });
+
+        // Expo's push endpoint responds 200 even when the push itself
+        // failed (bad/expired token, missing FCM credentials, etc.) — the
+        // real result is per-ticket inside the body, so without reading it
+        // a silently-failing push looked identical to a successful one.
+        const result = await response.json();
+        const ticket = Array.isArray(result.data) ? result.data[0] : result.data;
+
+        if (!response.ok || (ticket && ticket.status === "error")) {
+            console.log(`❌ Expo push error for "${title}":`, JSON.stringify(result));
+        }
 
     } catch (error) {
 
