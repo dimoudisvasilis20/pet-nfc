@@ -593,7 +593,7 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
     // not know exactly when/where the pet went missing, or may not want to
     // offer a reward. lat/lng, if given, must be a real pair (one without the
     // other can't be used to compute distances below).
-    const { lat, lng, missing_at, reward } = req.body;
+    const { lat, lng, notify_lat, notify_lng, missing_at, reward } = req.body;
 
     const hasLat = typeof lat === "number";
     const hasLng = typeof lng === "number";
@@ -603,6 +603,17 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
         return res.status(400).send("lat and lng must be provided together");
 
     }
+
+    // notify_lat/lng is a silent, background-only GPS fix the app grabs when
+    // the owner skips the visible "declare location" step — never stored or
+    // shown as the pet's last-seen location, only used below to still find
+    // nearby opted-in users to alert. The declared lat/lng (if given) is the
+    // better signal and takes priority.
+    const hasNotifyLat = typeof notify_lat === "number";
+    const hasNotifyLng = typeof notify_lng === "number";
+    const searchLat = hasLat ? lat : (hasNotifyLat ? notify_lat : null);
+    const searchLng = hasLng ? lng : (hasNotifyLng ? notify_lng : null);
+    const hasSearchPoint = searchLat !== null && searchLng !== null;
 
     try {
 
@@ -638,8 +649,9 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
         const pet = petResult.rows[0];
         let notifiedCount = 0;
 
-        // Nothing to compute distance from if no location was declared.
-        if (hasLat && hasLng) {
+        // Nothing to compute distance from if neither a declared nor a
+        // silent background location came through at all.
+        if (hasSearchPoint) {
 
             const nearbyUsers = await pool.query(
                 `
@@ -651,7 +663,7 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
             );
 
             const toNotify = nearbyUsers.rows.filter(
-                (u) => distanceKm(lat, lng, u.lat, u.lng) <= u.alert_radius_km
+                (u) => distanceKm(searchLat, searchLng, u.lat, u.lng) <= u.alert_radius_km
             );
 
             for (const u of toNotify) {
