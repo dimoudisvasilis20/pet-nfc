@@ -409,7 +409,7 @@ class="btn btn-outline"
 style="margin-top:10px;width:100%;"
 onclick="shareLocation()">
 
-📍 Κοινοποίηση της τοποθεσίας μου
+📍 Κοινοποίηση της τρέχουσας τοποθεσίας
 
 </button>
 
