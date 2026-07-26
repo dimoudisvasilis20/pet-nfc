@@ -195,6 +195,23 @@ pool.connect()
 
         }
 
+        try {
+
+            // GET /pets/lost/nearby pre-filters by a lat/lng bounding box before
+            // doing the exact Haversine distance check in JS — without this
+            // index that pre-filter still has to scan every lost pet with a
+            // location, which stops scaling once that table gets large. Partial
+            // (WHERE is_lost) since found pets never match this query anyway.
+            await pool.query(
+                "CREATE INDEX IF NOT EXISTS idx_pets_lost_location ON pets(last_seen_lat, last_seen_lng) WHERE is_lost = TRUE"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pets lost-location index):", error.message);
+
+        }
+
     })
     .catch((error) => {
 

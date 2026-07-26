@@ -125,6 +125,20 @@ const authLimiter = rateLimit({
 
 app.use(["/login", "/register", "/auth/google/mobile"], authLimiter);
 
+// /p/:code (NFC tag scans) and /pets/lost/nearby are public and
+// unauthenticated by design — anyone can hit them without an account, which
+// also means anyone can script against them. Generous enough that a person
+// genuinely scanning tags or browsing nearby lost pets never notices it.
+const publicLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Πάρα πολλά requests από αυτή τη συσκευή — δοκίμασε ξανά σε λίγο.",
+});
+
+app.use(["/p", "/pets/lost/nearby"], publicLimiter);
+
 // Static frontend (login.html, dashboard.html, add-pet.html, lost-pets.html, admin/...)
 app.use(express.static("public"));
 

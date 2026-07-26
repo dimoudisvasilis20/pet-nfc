@@ -124,6 +124,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id_unique ON users(google_id)
 
 CREATE INDEX IF NOT EXISTS idx_pets_user_id ON pets(user_id);
 CREATE INDEX IF NOT EXISTS idx_pets_is_lost ON pets(is_lost);
+-- Backs the bounding-box pre-filter in GET /pets/lost/nearby.
+CREATE INDEX IF NOT EXISTS idx_pets_lost_location ON pets(last_seen_lat, last_seen_lng) WHERE is_lost = TRUE;
 CREATE INDEX IF NOT EXISTS idx_tags_pet_id ON tags(pet_id);
 CREATE INDEX IF NOT EXISTS idx_tags_public_code ON tags(public_code);
 CREATE INDEX IF NOT EXISTS idx_scan_history_tag_id ON scan_history(tag_id);

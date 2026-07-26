@@ -782,6 +782,15 @@ router.get("/pets/lost/nearby", async (req, res) => {
 
     try {
 
+        // Cheap square pre-filter (backed by idx_pets_lost_location) so the
+        // DB only has to hand back pets in roughly the right area, instead of
+        // every lost pet on the planet — the exact circular distance/radius
+        // check below still runs on this smaller set, since a bounding box
+        // is a superset of the real circle (includes the box's corners).
+        // ~111km per degree of latitude; longitude shrinks with cos(lat).
+        const latDelta = radiusKm / 111;
+        const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
+
         // No owner name/phone here — this is a public, unauthenticated
         // endpoint, and only pet details should be visible to whoever's
         // browsing "lost pets near me". Actual contact with the owner
@@ -800,9 +809,10 @@ router.get("/pets/lost/nearby", async (req, res) => {
                 pets.reward
             FROM pets
             WHERE pets.is_lost = TRUE
-            AND pets.last_seen_lat IS NOT NULL
-            AND pets.last_seen_lng IS NOT NULL
-            `
+            AND pets.last_seen_lat BETWEEN $1 AND $2
+            AND pets.last_seen_lng BETWEEN $3 AND $4
+            `,
+            [lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta]
         );
 
         const nearby = result.rows
