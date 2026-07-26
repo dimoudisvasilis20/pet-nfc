@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Σφάλματα — PawTrace Admin</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+<div class="sidebar">
+
+<h2 class="brand-h2"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</h2>
+
+<a href="dashboard.html">🏠 Dashboard</a>
+
+<a href="users.html">👥 Users</a>
+
+<a href="pets.html">🐕 Pets</a>
+
+<a href="tags.html">🏷 NFC Tags</a>
+
+<a href="scans.html">📍 Scans</a>
+
+<a href="notifications.html">🔔 Notifications</a>
+
+<a href="errors.html" class="active">🚨 Σφάλματα</a>
+
+<a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="admin-content">
+
+<div class="admin-toolbar">
+<h1>🚨 Σφάλματα</h1>
+</div>
+
+<p style="color:var(--color-text-muted);margin-top:0;">Τελευταίες 14 μέρες, από το Sentry.</p>
+
+<div class="table-scroll">
+<table class="data-table">
+<thead>
+<tr>
+<th>Επίπεδο</th>
+<th>Σφάλμα</th>
+<th>Πηγή</th>
+<th>Εμφανίσεις</th>
+<th>Χρήστες</th>
+<th>Τελευταία φορά</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="errors-body">
+</tbody>
+</table>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none;">Δεν υπάρχουν σφάλματα τις τελευταίες 14 μέρες. 🎉</div>
+
+<div id="not-configured" class="empty-state" style="display:none;">
+Το Sentry δεν έχει ρυθμιστεί ακόμα (λείπει το <code>SENTRY_AUTH_TOKEN</code> στο Render).
+</div>
+
+</div>
+
+<script>
+
+const LEVEL_BADGE = {
+    fatal: "status-lost",
+    error: "status-lost",
+    warning: "status-inactive",
+    info: "status-user",
+    debug: "status-user",
+};
+
+async function loadErrors() {
+
+    const response = await fetch("/admin/errors");
+
+    if (response.status === 401 || response.status === 403) {
+        location.href = "../login.html";
+        return;
+    }
+
+    const tbody = document.getElementById("errors-body");
+    const emptyState = document.getElementById("empty-state");
+    const notConfigured = document.getElementById("not-configured");
+
+    if (!response.ok) {
+        emptyState.textContent = await response.text();
+        emptyState.style.display = "block";
+        return;
+    }
+
+    const data = await response.json();
+
+    if (!data.configured) {
+        notConfigured.style.display = "block";
+        return;
+    }
+
+    if (data.issues.length === 0) {
+        emptyState.style.display = "block";
+        return;
+    }
+
+    tbody.innerHTML = data.issues.map((issue) => `
+        <tr>
+            <td><span class="status-badge ${LEVEL_BADGE[issue.level] || "status-user"}">${issue.level}</span></td>
+            <td>${issue.title}</td>
+            <td style="color:var(--color-text-muted);font-size:13px;">${issue.culprit || "—"}</td>
+            <td>${issue.count}</td>
+            <td>${issue.userCount}</td>
+            <td>${new Date(issue.lastSeen).toLocaleString("el-GR")}</td>
+            <td><a href="${issue.permalink}" target="_blank" rel="noopener" class="btn btn-outline btn-auto" style="padding:6px 10px;font-size:12px;">Sentry ↗</a></td>
+        </tr>
+    `).join("");
+
+}
+
+loadErrors();
+
+</script>
+
+</body>
+
+</html>

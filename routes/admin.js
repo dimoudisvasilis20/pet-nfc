@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const pool = require("../db/database");
 const requireAdmin = require("../middleware/admin");
+const { getRecentIssues } = require("../utils/sentry");
 const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
@@ -305,6 +306,38 @@ router.put("/admin/pets/:id/reset-edit-lock", requireAdmin, async (req, res) => 
         logError(error);
 
         res.status(500).send("Reset edit lock error");
+
+    }
+
+});
+
+/*
+========================================
+RECENT ERRORS (from Sentry)
+========================================
+*/
+
+router.get("/admin/errors", requireAdmin, async (req, res) => {
+
+    try {
+
+        const issues = await getRecentIssues();
+
+        if (issues === null) {
+
+            return res.json({ configured: false, issues: [] });
+
+        }
+
+        res.json({ configured: true, issues });
+
+    }
+
+    catch(error){
+
+        logError(error);
+
+        res.status(500).send("Errors fetch error");
 
     }
 
