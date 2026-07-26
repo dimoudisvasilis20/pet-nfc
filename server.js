@@ -1,5 +1,19 @@
 require("dotenv").config({ quiet: true }); // suppresses dotenv's promotional console "tips"
 
+// Sentry must be initialized before anything else is required so it can
+// instrument them. No-op (and no dependency on a Sentry account existing)
+// until SENTRY_DSN is set in the environment — safe to deploy either way.
+if (process.env.SENTRY_DSN) {
+
+    const Sentry = require("@sentry/node");
+
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.RENDER ? "production" : "development",
+    });
+
+}
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -154,6 +168,26 @@ app.use(locationRoutes);      // /me/location  <- opt in to lost-pet alerts
 app.use(scanRoutes);          // /scans
 app.use(accountRoutes);       // /me, /me/password  <- view/edit profile, change password, delete account
 app.use(calendarRoutes);      // /calendar-events    <- vet/groomer appointments & medication reminders
+
+// Plain liveness check for external uptime monitors (UptimeRobot etc.) to
+// poll — no auth, no DB round-trip, just confirms the process is up and
+// answering requests.
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
+});
+
+// Must come after all routes but before any other error-handling middleware
+// (there isn't one here) — captures anything an route passes to next(err)
+// or throws synchronously. Errors that routes already catch and respond to
+// themselves (the vast majority in this codebase) never reach this; process
+// crashes (uncaught exceptions/unhandled rejections) are captured separately
+// by Sentry's own default integrations, enabled automatically by Sentry.init.
+if (process.env.SENTRY_DSN) {
+
+    const Sentry = require("@sentry/node");
+    Sentry.setupExpressErrorHandler(app);
+
+}
 
 const PORT = process.env.PORT || 3000;
 
