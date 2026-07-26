@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -62,7 +63,7 @@ router.get("/dashboard", requireLogin, async (req, res) => {
     }
     catch (error) {
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Dashboard error");
 

@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const pool = require("../db/database");
 const requireAdmin = require("../middleware/admin");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ router.get("/admin/stats", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Admin stats error");
 
@@ -98,7 +99,7 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Users error");
 
@@ -155,7 +156,7 @@ router.put("/admin/users/:id/role", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Role update error");
 
@@ -217,7 +218,7 @@ router.delete("/admin/users/:id", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Delete user error");
 
@@ -259,7 +260,7 @@ router.get("/admin/pets", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Pets error");
 
@@ -301,7 +302,7 @@ router.put("/admin/pets/:id/reset-edit-lock", requireAdmin, async (req, res) => 
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Reset edit lock error");
 
@@ -356,7 +357,7 @@ router.get("/admin/scans", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Scans error");
 
@@ -398,7 +399,7 @@ router.get("/admin/notifications", requireAdmin, async (req, res) => {
 
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500).send("Notifications error");
 

@@ -6,6 +6,7 @@ const requireLogin = require("../middleware/auth");
 const { distanceKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notify");
 const { uploadPhoto, deletePhoto } = require("../utils/storage");
+const { logError } = require("../utils/errorReporting");
 const { getAccessiblePetOwnerId } = require("../utils/petAccess");
 
 const router = express.Router();
@@ -146,7 +147,7 @@ router.post("/pets", requireLogin, photoUpload.single("photo"), async (req, res)
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Pet creation error");
 
     }
@@ -189,7 +190,7 @@ router.get("/pets", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Pets error");
 
     }
@@ -259,7 +260,7 @@ router.get("/pets/:id", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Pet error");
 
     }
@@ -406,7 +407,7 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Update error");
 
     }
@@ -469,7 +470,7 @@ router.post("/pets/:id/photo", requireLoginOrUploadToken, photoUpload.single("ph
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Photo upload error");
 
     }
@@ -511,7 +512,7 @@ router.delete("/pets/:id", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Delete error");
 
     }
@@ -583,7 +584,7 @@ router.put("/pets/:id/transfer", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Transfer error");
 
     }
@@ -701,7 +702,7 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Lost-mode error");
 
     }
@@ -753,7 +754,7 @@ router.post("/pets/:id/found", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Found-mode error");
 
     }
@@ -827,7 +828,7 @@ router.get("/pets/lost/nearby", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Nearby lost pets error");
 
     }
@@ -973,7 +974,7 @@ router.post("/pets/:id/tag", requireLogin, async (req, res) => {
 
         }
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Tag pairing error");
 
     }

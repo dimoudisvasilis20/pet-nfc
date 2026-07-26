@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get("/notifications", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Notifications error");
 
     }
@@ -64,7 +65,7 @@ router.put("/notifications/:id/read", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Update error");
 
     }
@@ -99,7 +100,7 @@ router.delete("/notifications/:id", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Delete error");
 
     }

@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
 const { getAccessiblePetOwnerId } = require("../utils/petAccess");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.get("/calendar-events", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Calendar events error");
 
     }
@@ -145,7 +146,7 @@ router.post("/calendar-events", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Event creation error");
 
     }
@@ -198,7 +199,7 @@ router.put("/calendar-events/:id/reschedule", requireLogin, async (req, res) => 
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Reschedule error");
 
     }
@@ -242,7 +243,7 @@ router.put("/calendar-events/:id/complete", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Complete error");
 
     }
@@ -274,7 +275,7 @@ router.delete("/calendar-events/:id", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Delete error");
 
     }

@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -45,7 +46,7 @@ router.get("/me", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Profile error");
 
     }
@@ -93,7 +94,7 @@ router.put("/me", requireLogin, async (req, res) => {
 
         }
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Profile update error");
 
     }
@@ -148,7 +149,7 @@ router.put("/me/password", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Password update error");
 
     }
@@ -199,7 +200,7 @@ router.delete("/me", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Account deletion error");
 
     }
@@ -243,7 +244,7 @@ router.put("/me/push-token", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Push token error");
 
     }
@@ -279,7 +280,7 @@ router.get("/me/family", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Family list error");
 
     }
@@ -330,7 +331,7 @@ router.post("/me/family", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Family add error");
 
     }
@@ -350,7 +351,7 @@ router.delete("/me/family/:memberId", requireLogin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Family remove error");
 
     }

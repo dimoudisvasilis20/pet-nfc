@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const pool = require("../db/database");
 const { sendWelcomeEmail } = require("../utils/email");
+const { logError } = require("../utils/errorReporting");
 const { getGoogleAuthUrl, getGoogleProfile, verifyGoogleIdToken, findOrCreateGoogleUser } = require("../utils/googleAuth");
 
 const router = express.Router();
@@ -75,7 +76,7 @@ router.post("/register", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Register error");
 
     }
@@ -120,7 +121,7 @@ router.get("/verify-email", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).json({ message: "Σφάλμα επιβεβαίωσης email" });
 
     }
@@ -160,7 +161,7 @@ router.get("/auth/google/callback", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.redirect("/login.html?error=google");
 
     }
@@ -197,7 +198,7 @@ router.post("/auth/google/mobile", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(401).send("Google sign-in failed");
 
     }
@@ -262,7 +263,7 @@ router.post("/login", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Login error");
 
     }

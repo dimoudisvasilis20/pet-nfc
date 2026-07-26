@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/database");
 const { createNotification } = require("../utils/notify");
 const { getPhotoObject } = require("../utils/storage");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -136,7 +137,7 @@ router.get("/p/:code", async (req, res) => {
     }
     catch(error){
 
-        console.log(error);
+        logError(error);
 
         res.status(500)
         .send("Database error");
@@ -196,7 +197,7 @@ router.post("/p/:code/share-location", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Share location error");
 
     }

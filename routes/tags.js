@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/database");
 const requireAdmin = require("../middleware/admin");
 const { generatePublicCode, generateSerialNumber } = require("../utils/tagCode");
+const { logError } = require("../utils/errorReporting");
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.get("/tags", requireAdmin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Tags error");
 
     }
@@ -67,7 +68,7 @@ router.get("/tags/:id", requireAdmin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Tag error");
 
     }
@@ -133,7 +134,7 @@ router.post("/tags", requireAdmin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Create tag error");
 
     }
@@ -213,7 +214,7 @@ router.put("/tags/:id/assign", requireAdmin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
 
         if (error.code === "23505") {
 
@@ -262,7 +263,7 @@ router.delete("/tags/:id", requireAdmin, async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        logError(error);
         res.status(500).send("Delete error");
 
     }
