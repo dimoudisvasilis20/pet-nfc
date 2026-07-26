@@ -267,6 +267,48 @@ router.get("/admin/pets", requireAdmin, async (req, res) => {
 
 });
 
+/*
+========================================
+RESET PET DETAILS-EDIT COOLDOWN
+========================================
+*/
+
+router.put("/admin/pets/:id/reset-edit-lock", requireAdmin, async (req, res) => {
+
+    try {
+
+        const result = await pool.query(
+            `
+            UPDATE pets
+            SET details_updated_at=NULL
+            WHERE id=$1
+            RETURNING id
+            `,
+            [req.params.id]
+        );
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
+        res.json({
+            message: "Edit cooldown reset"
+        });
+
+    }
+
+    catch(error){
+
+        console.log(error);
+
+        res.status(500).send("Reset edit lock error");
+
+    }
+
+});
+
 // Tag management (list/create/assign/delete) lives in routes/tags.js —
 // GET /tags, POST /tags, PUT /tags/:id/assign, DELETE /tags/:id.
 

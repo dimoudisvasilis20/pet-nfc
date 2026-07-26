@@ -49,6 +49,7 @@
 <th>Ιδιοκτήτης</th>
 <th>Κατάσταση</th>
 <th>Δημιουργήθηκε</th>
+<th>Επεξεργασία στοιχείων</th>
 </tr>
 </thead>
 <tbody id="pets-body">
@@ -80,22 +81,66 @@ async function loadPets() {
         return;
     }
 
-    tbody.innerHTML = pets.map((pet) => `
-        <tr>
-            <td>${pet.photo
-                ? `<img src="${pet.photo}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">`
-                : `<span style="font-size:20px;">🐾</span>`
-            }</td>
-            <td>${pet.name}</td>
-            <td>${[pet.species, pet.breed].filter(Boolean).join(" · ") || "—"}</td>
-            <td>${pet.first_name} ${pet.last_name}</td>
-            <td>${pet.is_lost
-                ? `<span class="status-badge status-lost">Χαμένο</span>`
-                : `<span class="status-badge status-active">OK</span>`
-            }</td>
-            <td>${new Date(pet.created_at).toLocaleDateString("el-GR")}</td>
-        </tr>
-    `).join("");
+    tbody.innerHTML = pets.map((pet) => {
+
+        let editLockCell = `<span style="color:var(--color-text-muted);font-size:12px;">Ελεύθερη</span>`;
+
+        if (pet.details_updated_at) {
+
+            const nextAllowed = new Date(pet.details_updated_at);
+            nextAllowed.setMonth(nextAllowed.getMonth() + 6);
+
+            if (nextAllowed > new Date()) {
+                editLockCell = `
+                    <span style="font-size:12px;">Κλειδωμένη έως ${nextAllowed.toLocaleDateString("el-GR")}</span>
+                    <button class="btn btn-outline btn-auto reset-lock-btn" data-id="${pet.id}" data-name="${pet.name}" style="padding:6px 10px;font-size:12px;margin-left:6px;">
+                        Άρση κλειδώματος
+                    </button>
+                `;
+            }
+
+        }
+
+        return `
+            <tr>
+                <td>${pet.photo
+                    ? `<img src="${pet.photo}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">`
+                    : `<span style="font-size:20px;">🐾</span>`
+                }</td>
+                <td>${pet.name}</td>
+                <td>${[pet.species, pet.breed].filter(Boolean).join(" · ") || "—"}</td>
+                <td>${pet.first_name} ${pet.last_name}</td>
+                <td>${pet.is_lost
+                    ? `<span class="status-badge status-lost">Χαμένο</span>`
+                    : `<span class="status-badge status-active">OK</span>`
+                }</td>
+                <td>${new Date(pet.created_at).toLocaleDateString("el-GR")}</td>
+                <td style="white-space:nowrap;">${editLockCell}</td>
+            </tr>
+        `;
+
+    }).join("");
+
+    document.querySelectorAll(".reset-lock-btn").forEach((btn) => {
+        btn.addEventListener("click", () => resetEditLock(btn.dataset.id, btn.dataset.name));
+    });
+
+}
+
+async function resetEditLock(id, name) {
+
+    if (!confirm(`Να επιτραπεί ξανά η επεξεργασία στοιχείων για το "${name}" πριν συμπληρωθούν οι 6 μήνες;`)) {
+        return;
+    }
+
+    const response = await fetch(`/admin/pets/${id}/reset-edit-lock`, { method: "PUT" });
+
+    if (!response.ok) {
+        alert(await response.text());
+        return;
+    }
+
+    await loadPets();
 
 }
 
