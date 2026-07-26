@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS pets (
     color VARCHAR(50),
     microchip VARCHAR(50),
     medical_notes TEXT,
+    distinguishing_features TEXT, -- e.g. "κηλίδα στο δεξί μάτι" — shown on the lost-pet poster
     vet_name VARCHAR(150),
     vet_phone VARCHAR(30),
     photo VARCHAR(500),
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS pets (
     last_seen_lat DOUBLE PRECISION,
     last_seen_lng DOUBLE PRECISION,
     reward VARCHAR(100), -- optional free-text reward offered, e.g. "50€"
+    last_seen_area VARCHAR(200), -- human-readable text (e.g. "Πλατεία Νέας Σμύρνης") for the lost-pet poster; GPS coords aren't printable
 
     -- last time the pet's own details (not photo) were edited; NULL = never.
     -- Details can only be edited once every 6 months — see PUT /pets/:id.

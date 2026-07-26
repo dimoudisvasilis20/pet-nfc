@@ -180,6 +180,21 @@ pool.connect()
 
         }
 
+        try {
+
+            await pool.query(
+                "ALTER TABLE pets ADD COLUMN IF NOT EXISTS distinguishing_features TEXT"
+            );
+            await pool.query(
+                "ALTER TABLE pets ADD COLUMN IF NOT EXISTS last_seen_area VARCHAR(200)"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pets.distinguishing_features / last_seen_area):", error.message);
+
+        }
+
     })
     .catch((error) => {
 

@@ -95,6 +95,11 @@
 <textarea id="medical_notes" placeholder="Ιατρικές πληροφορίες"></textarea>
 </div>
 
+<div class="field">
+<label for="distinguishing_features">Ιδιαίτερα χαρακτηριστικά</label>
+<textarea id="distinguishing_features" placeholder="π.χ. κηλίδα στο δεξί μάτι"></textarea>
+</div>
+
 <div class="form-grid">
 
 <div class="field">
@@ -166,6 +171,7 @@ async function addPet(){
     data.append("color", document.getElementById("color").value);
     data.append("microchip", document.getElementById("microchip").value);
     data.append("medical_notes", document.getElementById("medical_notes").value);
+    data.append("distinguishing_features", document.getElementById("distinguishing_features").value);
     data.append("vet_name", document.getElementById("vet_name").value);
     data.append("vet_phone", document.getElementById("vet_phone").value);
 

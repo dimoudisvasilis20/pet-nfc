@@ -92,6 +92,11 @@
 </div>
 
 <div class="field">
+<label for="distinguishing_features">Ιδιαίτερα χαρακτηριστικά</label>
+<textarea id="distinguishing_features" placeholder="π.χ. κηλίδα στο δεξί μάτι"></textarea>
+</div>
+
+<div class="field">
 <label for="vet_name">Κτηνίατρος</label>
 <input id="vet_name" placeholder="Κτηνίατρος">
 </div>
@@ -217,6 +222,7 @@ async function loadPet(){
     document.getElementById("color").value = pet.color || "";
     document.getElementById("microchip").value = pet.microchip || "";
     document.getElementById("medical_notes").value = pet.medical_notes || "";
+    document.getElementById("distinguishing_features").value = pet.distinguishing_features || "";
     document.getElementById("vet_name").value = pet.vet_name || "";
     document.getElementById("vet_phone").value = pet.vet_phone || "";
 
@@ -284,6 +290,7 @@ async function savePet(){
     data.append("color", document.getElementById("color").value);
     data.append("microchip", document.getElementById("microchip").value);
     data.append("medical_notes", document.getElementById("medical_notes").value);
+    data.append("distinguishing_features", document.getElementById("distinguishing_features").value);
     data.append("vet_name", document.getElementById("vet_name").value);
     data.append("vet_phone", document.getElementById("vet_phone").value);
 

@@ -146,6 +146,8 @@ ${pet.is_lost
     : `<button class="btn btn-success" onclick="markLost(${pet.id})">🚨 Χάθηκε</button>`
 }
 
+${pet.is_lost ? `<a class="btn btn-outline" href="/poster.html?id=${pet.id}">🖨️ Αφίσα αναζήτησης</a>` : ""}
+
 <a class="btn btn-outline" href="/edit-pet.html?id=${pet.id}">✏️ Επεξεργασία</a>
 
 </div>
@@ -178,6 +180,8 @@ if(!confirm("Είστε σίγουρος/η ότι θέλετε να δηλώσ�
 return;
 }
 
+const lastSeenArea = prompt("Περιοχή/δρόμος που εθεάθη τελευταία φορά (προαιρετικό):") || null;
+
 if(!navigator.geolocation){
 
 alert("Ο browser σου δεν υποστηρίζει τοποθεσία");
@@ -198,7 +202,9 @@ body: JSON.stringify({
 
 lat: position.coords.latitude,
 
-lng: position.coords.longitude
+lng: position.coords.longitude,
+
+last_seen_area: lastSeenArea
 
 })
 

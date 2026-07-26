@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>Αφίσα αναζήτησης</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/css/style.css">
+
+<style>
+
+@media print {
+    .app-sidebar, .page-topbar, .no-print { display: none !important; }
+    .app-main { margin: 0 !important; }
+    .print-poster { box-shadow: none !important; }
+}
+
+.poster-preview-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+#poster-canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+}
+
+.print-poster {
+    display: none;
+}
+
+@media print {
+
+    .print-poster {
+        display: block;
+        max-width: 100%;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .print-poster h1 {
+        font-size: 42px;
+        color: #dc2626;
+    }
+
+    .print-poster img.pet-photo {
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #dc2626;
+    }
+
+    .print-poster .line {
+        font-size: 18px;
+        margin: 6px 0;
+    }
+
+    .print-poster .reward {
+        font-size: 22px;
+        font-weight: 800;
+        color: #dc2626;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+<div class="app-sidebar">
+<a class="brand" href="/dashboard.html"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</a>
+<div class="nav-links">
+<a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
+<a href="/calendar.html">📅 Ημερολόγιο</a>
+<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
+<a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
+<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
+<a href="/notifications.html">🔔 Ειδοποιήσεις</a>
+<a href="/account.html">👤 Λογαριασμός</a>
+</div>
+</div>
+
+<div class="app-main">
+
+<div class="page-topbar no-print">
+<a class="brand" href="/dashboard.html"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</a>
+<button class="btn btn-outline btn-auto" onclick="logout()">🚪 Αποσύνδεση</button>
+</div>
+
+<div class="page">
+
+<div class="card no-print">
+
+<h1>🖨️ Αφίσα αναζήτησης</h1>
+<p id="result" class="result-msg"></p>
+
+<div class="poster-preview-wrap">
+<canvas id="poster-canvas" width="1080" height="1400"></canvas>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+<button id="share-btn" class="btn btn-auto" onclick="sharePoster()" style="display:none;">📤 Κοινοποίηση</button>
+<button class="btn btn-auto" onclick="downloadPoster()">⬇️ Λήψη εικόνας</button>
+<button class="btn btn-outline btn-auto" onclick="window.print()">🖨️ Εκτύπωση</button>
+</div>
+
+</div>
+
+<div id="print-poster" class="print-poster"></div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+async function logout(){
+    if(!confirm("Είστε σίγουρος ότι θέλετε να αποσυνδεθείτε;")){
+        return;
+    }
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+}
+
+const params = new URLSearchParams(window.location.search);
+const petId = params.get("id");
+
+if(!petId){
+    document.getElementById("result").innerHTML = "Λείπει το κατοικίδιο.";
+    throw new Error("missing id");
+}
+
+function formatDateGR(value){
+    if(!value) return null;
+    return new Date(value).toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+    const words = text.split(" ");
+    let line = "";
+    let lines = [];
+    for(const word of words){
+        const testLine = line ? line + " " + word : word;
+        if(ctx.measureText(testLine).width > maxWidth && line){
+            lines.push(line);
+            line = word;
+        } else {
+            line = testLine;
+        }
+    }
+    if(line) lines.push(line);
+    lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+    return lines.length;
+}
+
+async function loadImage(src){
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+async function drawPoster(pet){
+
+    const canvas = document.getElementById("poster-canvas");
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    // red banner
+    ctx.fillStyle = "#dc2626";
+    ctx.fillRect(0, 0, W, 160);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 80px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("🚨 ΧΑΘΗΚΕ", W / 2, 105);
+
+    let y = 260;
+
+    // photo (circular)
+    const photoSize = 420;
+    const photoX = W / 2 - photoSize / 2;
+
+    if(pet.photo){
+        try {
+            const img = await loadImage(pet.photo);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(W / 2, y + photoSize / 2, photoSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(img, photoX, y, photoSize, photoSize);
+            ctx.restore();
+        } catch(e){
+            // fall through to placeholder ring below
+        }
+    }
+
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(W / 2, y + photoSize / 2, photoSize / 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    y += photoSize + 70;
+
+    ctx.fillStyle = "#111827";
+    ctx.font = "bold 90px sans-serif";
+    ctx.fillText(pet.name || "", W / 2, y);
+    y += 70;
+
+    ctx.font = "40px sans-serif";
+    ctx.fillStyle = "#6b7280";
+    const metaLine = [pet.breed, pet.color].filter(Boolean).join(" · ");
+    if(metaLine){
+        ctx.fillText(metaLine, W / 2, y);
+        y += 60;
+    }
+
+    ctx.font = "34px sans-serif";
+    ctx.fillStyle = "#111827";
+    ctx.textAlign = "center";
+
+    if(pet.distinguishing_features){
+        y += wrapText(ctx, "🔎 " + pet.distinguishing_features, W / 2, y, W - 160, 44) * 44 + 10;
+    }
+
+    if(pet.last_seen_area){
+        ctx.fillText("📍 Εθεάθη: " + pet.last_seen_area, W / 2, y);
+        y += 50;
+    }
+
+    if(formatDateGR(pet.lost_at)){
+        ctx.fillText("🕒 " + formatDateGR(pet.lost_at), W / 2, y);
+        y += 50;
+    }
+
+    if(pet.reward){
+        ctx.font = "bold 46px sans-serif";
+        ctx.fillStyle = "#dc2626";
+        ctx.fillText("🎁 Αμοιβή: " + pet.reward, W / 2, y + 10);
+        y += 70;
+    }
+
+    ctx.font = "bold 50px sans-serif";
+    ctx.fillStyle = "#111827";
+    ctx.fillText("📞 " + (pet.phone || ""), W / 2, y + 20);
+
+}
+
+function renderPrintView(pet){
+
+    const el = document.getElementById("print-poster");
+
+    el.innerHTML = `
+        <h1>🚨 ΧΑΘΗΚΕ</h1>
+        ${pet.photo ? `<img class="pet-photo" src="${pet.photo}">` : ""}
+        <h2>${pet.name || ""}</h2>
+        <p class="line">${[pet.breed, pet.color].filter(Boolean).join(" · ")}</p>
+        ${pet.distinguishing_features ? `<p class="line">🔎 ${pet.distinguishing_features}</p>` : ""}
+        ${pet.last_seen_area ? `<p class="line">📍 Εθεάθη: ${pet.last_seen_area}</p>` : ""}
+        ${formatDateGR(pet.lost_at) ? `<p class="line">🕒 ${formatDateGR(pet.lost_at)}</p>` : ""}
+        ${pet.reward ? `<p class="reward">🎁 Αμοιβή: ${pet.reward}</p>` : ""}
+        <p class="line" style="font-weight:800;font-size:28px;">📞 ${pet.phone || ""}</p>
+    `;
+
+}
+
+function downloadPoster(){
+    const canvas = document.getElementById("poster-canvas");
+    const link = document.createElement("a");
+    link.download = "afisa-anazitisis.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+}
+
+// Shares the poster as an actual image file through the device's native
+// share sheet (WhatsApp, Messages, etc. all appear there) — deliberately
+// NOT a link to /p/:code, since opening that page logs a "someone scanned
+// the tag" notification to the owner, which would be misleading here (no
+// one actually scanned the physical tag, they just viewed a shared photo).
+async function sharePoster(){
+
+    const canvas = document.getElementById("poster-canvas");
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const file = new File([blob], "afisa-anazitisis.png", { type: "image/png" });
+
+    try {
+        await navigator.share({
+            files: [file],
+            title: "Χαμένο κατοικίδιο",
+        });
+    } catch(e){
+        // user cancelled the share sheet — not an error worth surfacing
+    }
+
+}
+
+function setupShareButton(){
+
+    const btn = document.getElementById("share-btn");
+    const canShareFiles = navigator.canShare && navigator.canShare({ files: [new File([], "test.png", { type: "image/png" })] });
+
+    if(canShareFiles){
+        btn.style.display = "inline-flex";
+    }
+
+}
+
+async function loadPet(){
+
+    const response = await fetch(`/pets/${petId}`);
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    if(!response.ok){
+        document.getElementById("result").innerHTML = "Το κατοικίδιο δεν βρέθηκε.";
+        return;
+    }
+
+    const pet = await response.json();
+
+    await drawPoster(pet);
+    renderPrintView(pet);
+    setupShareButton();
+
+}
+
+loadPet();
+
+</script>
+
+</body>
+</html>

@@ -82,6 +82,7 @@ router.post("/pets", requireLogin, photoUpload.single("photo"), async (req, res)
         color,
         microchip,
         medical_notes,
+        distinguishing_features,
         vet_name,
         vet_phone
     } = req.body;
@@ -109,13 +110,14 @@ router.post("/pets", requireLogin, photoUpload.single("photo"), async (req, res)
                 color,
                 microchip,
                 medical_notes,
+                distinguishing_features,
                 vet_name,
                 vet_phone,
                 photo
             )
             VALUES
             (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
             )
             RETURNING *
             `,
@@ -130,6 +132,7 @@ router.post("/pets", requireLogin, photoUpload.single("photo"), async (req, res)
                 color,
                 microchip,
                 medical_notes,
+                distinguishing_features,
                 vet_name,
                 vet_phone,
                 photo
@@ -229,10 +232,14 @@ router.get("/pets/:id", requireLogin, async (req, res) => {
                 pets.*,
                 tags.public_code,
                 tags.serial_number,
-                tags.status AS tag_status
+                tags.status AS tag_status,
+                users.phone,
+                users.alt_phone
             FROM pets
             LEFT JOIN tags
             ON pets.id = tags.pet_id
+            JOIN users
+            ON users.id = pets.user_id
             WHERE pets.id = $1
             AND pets.user_id = $2
             `,
@@ -277,6 +284,7 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
         color,
         microchip,
         medical_notes,
+        distinguishing_features,
         vet_name,
         vet_phone
     } = req.body;
@@ -317,6 +325,7 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
             (color || "") !== (current.color || "") ||
             (microchip || "") !== (current.microchip || "") ||
             (medical_notes || "") !== (current.medical_notes || "") ||
+            (distinguishing_features || "") !== (current.distinguishing_features || "") ||
             (vet_name || "") !== (current.vet_name || "") ||
             (vet_phone || "") !== (current.vet_phone || "");
 
@@ -354,13 +363,14 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
                 color=$7,
                 microchip=$8,
                 medical_notes=$9,
-                vet_name=$10,
-                vet_phone=$11,
-                photo=$12,
+                distinguishing_features=$10,
+                vet_name=$11,
+                vet_phone=$12,
+                photo=$13,
                 updated_at=NOW(),
-                details_updated_at=CASE WHEN $15 THEN NOW() ELSE details_updated_at END
-            WHERE id=$13
-            AND user_id=$14
+                details_updated_at=CASE WHEN $16 THEN NOW() ELSE details_updated_at END
+            WHERE id=$14
+            AND user_id=$15
             RETURNING *
             `,
             [
@@ -373,6 +383,7 @@ router.put("/pets/:id", requireLogin, photoUpload.single("photo"), async (req, r
                 color,
                 microchip,
                 medical_notes,
+                distinguishing_features,
                 vet_name,
                 vet_phone,
                 photo,
@@ -593,7 +604,7 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
     // not know exactly when/where the pet went missing, or may not want to
     // offer a reward. lat/lng, if given, must be a real pair (one without the
     // other can't be used to compute distances below).
-    const { lat, lng, notify_lat, notify_lng, missing_at, reward } = req.body;
+    const { lat, lng, notify_lat, notify_lng, missing_at, reward, last_seen_area } = req.body;
 
     const hasLat = typeof lat === "number";
     const hasLng = typeof lng === "number";
@@ -632,12 +643,13 @@ router.post("/pets/:id/lost", requireLogin, async (req, res) => {
                 lost_at = COALESCE($1::timestamp, NOW()),
                 last_seen_lat = $2,
                 last_seen_lng = $3,
-                reward = $4
-            WHERE id = $5
-            AND user_id = $6
+                reward = $4,
+                last_seen_area = $5
+            WHERE id = $6
+            AND user_id = $7
             RETURNING *
             `,
-            [missing_at || null, hasLat ? lat : null, hasLng ? lng : null, reward || null, req.params.id, ownerId]
+            [missing_at || null, hasLat ? lat : null, hasLng ? lng : null, reward || null, last_seen_area || null, req.params.id, ownerId]
         );
 
         if (petResult.rows.length === 0) {
@@ -719,7 +731,8 @@ router.post("/pets/:id/found", requireLogin, async (req, res) => {
             UPDATE pets
             SET is_lost = FALSE,
                 lost_at = NULL,
-                reward = NULL
+                reward = NULL,
+                last_seen_area = NULL
             WHERE id = $1
             AND user_id = $2
             RETURNING *
