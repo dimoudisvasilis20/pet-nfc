@@ -166,6 +166,16 @@ router.put("/tags/:id/assign", requireAdmin, async (req, res) => {
 
         }
 
+        // Each pet gets exactly one tag — reject if this pet already has a
+        // different tag row, rather than letting it end up with two.
+        const existingForPet = await pool.query("SELECT id FROM tags WHERE pet_id=$1", [pet_id]);
+
+        if (existingForPet.rows.length > 0) {
+
+            return res.status(409).send("Αυτό το κατοικίδιο έχει ήδη ένα tag — κάθε κατοικίδιο μπορεί να αντιστοιχιστεί μόνο σε ένα tag.");
+
+        }
+
         // A tag can only ever be assigned once — once it's attached to a pet,
         // it stays attached to that pet even if the pet changes owners (see
         // PUT /pets/:id/transfer, which only updates the pet's user_id and

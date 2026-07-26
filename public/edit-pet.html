@@ -118,6 +118,8 @@
 
 <p id="tag-current" class="result-msg" style="margin-top:0"></p>
 
+<div id="tag-pair-form">
+
 <div class="field">
 <label for="tag_code">Αριθμός/κωδικός tag</label>
 <input id="tag_code" placeholder="π.χ. ο κωδικός τυπωμένος στο tag">
@@ -126,6 +128,8 @@
 <button class="btn btn-outline btn-auto" onclick="pairTag()">Σύνδεση tag</button>
 
 <p id="tag-result" class="result-msg"></p>
+
+</div>
 
 </div>
 
@@ -236,9 +240,9 @@ async function loadPet(){
         ? `Τρέχον tag: <strong>${pet.public_code}</strong> · Κατάσταση: ${pet.tag_status || "-"}`
         : "Δεν έχει συνδεθεί tag ακόμα.";
 
-    if(pet.public_code){
-        document.getElementById("tag_code").value = pet.public_code;
-    }
+    // Κάθε κατοικίδιο αντιστοιχίζεται σε ένα μόνο tag — αν έχει ήδη ένα,
+    // κρύβουμε τη φόρμα σύνδεσης αντί να επιτρέψουμε σιωπηλή αντικατάσταση.
+    document.getElementById("tag-pair-form").style.display = pet.public_code ? "none" : "block";
 
 }
 
