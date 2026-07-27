@@ -3,10 +3,10 @@
    ============================================ */
 
 :root{
-    --color-primary:#2563eb;
-    --color-primary-dark:#1d4ed8;
-    --color-primary-light:#eff6ff;
-    --gradient-primary:linear-gradient(135deg,#2563eb,#4f46e5);
+    --color-primary:#5397c8;
+    --color-primary-dark:#3a6a8c;
+    --color-primary-light:#eaf3f8;
+    --gradient-primary:linear-gradient(135deg,#5397c8,#3a6a8c);
 
     --color-bg:#f5f6fa;
     --color-surface:#ffffff;
@@ -21,7 +21,7 @@
     --color-success-light:#f0fdf4;
     --color-warning-bg:#fef3c7;
 
-    --color-vet:#2563eb;
+    --color-vet:#5397c8;
     --color-groomer:#9333ea;
     --color-medication:#d97706;
 
@@ -632,7 +632,7 @@ textarea{
     font-size:56px;
     border-radius:var(--radius-sm);
     margin-bottom:12px;
-    background:linear-gradient(135deg,var(--color-primary-light),#e0e7ff);
+    background:linear-gradient(135deg,var(--color-primary-light),#ddeaf4);
 }
 
 .pet-card{
@@ -658,7 +658,7 @@ textarea{
     justify-content:center;
     font-size:30px;
     flex-shrink:0;
-    background:linear-gradient(135deg,var(--color-primary-light),#e0e7ff);
+    background:linear-gradient(135deg,var(--color-primary-light),#ddeaf4);
 }
 
 .pet-card-body{

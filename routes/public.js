@@ -290,7 +290,7 @@ display:flex;
 align-items:center;
 justify-content:center;
 font-size:56px;
-background:linear-gradient(135deg,var(--color-primary-light),#e0e7ff);
+background:linear-gradient(135deg,var(--color-primary-light),#ddeaf4);
 border:3px solid var(--color-border);
 
 }

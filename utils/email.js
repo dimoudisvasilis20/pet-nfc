@@ -23,10 +23,10 @@ async function sendWelcomeEmail(to, firstName, verifyUrl) {
         subject: "Καλώς ήρθες στο PawTrace 🐾",
         html: `
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1e293b;">
-                <h1 style="color:#2563eb;">Καλώς ήρθες, ${firstName}! 🐾</h1>
+                <h1 style="color:#5397c8;">Καλώς ήρθες, ${firstName}! 🐾</h1>
                 <p>Ευχαριστούμε που έγινες μέλος του PawTrace. Πριν ξεκινήσεις, επιβεβαίωσε το email σου πατώντας το παρακάτω κουμπί:</p>
                 <p style="text-align:center;margin:32px 0;">
-                    <a href="${verifyUrl}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;">Επιβεβαίωση email</a>
+                    <a href="${verifyUrl}" style="background:#5397c8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;">Επιβεβαίωση email</a>
                 </p>
                 <p style="color:#64748b;font-size:13px;">Αν το κουμπί δεν δουλεύει, αντέγραψε αυτόν τον σύνδεσμο στον browser σου:<br>${verifyUrl}</p>
             </div>
