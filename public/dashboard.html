@@ -65,6 +65,41 @@ async function logout(){
 
 }
 
+// "Χαμένα κοντά μου" opt-in only ever captured a GPS fix at the moment the
+// button was first clicked (see enableLostAlerts) — never again after that.
+// A user who opted in once and then genuinely moved stays "stuck" at their
+// old coordinates forever, silently making every future distance check
+// against them wrong. Refresh it once per page load if they're already
+// opted in, without requiring them to click the button again.
+async function refreshLocationIfOptedIn(){
+
+    const meResponse = await fetch("/me");
+
+    if(!meResponse.ok) return;
+
+    const me = await meResponse.json();
+
+    if(!me.location_shared) return;
+    if(!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition((position) => {
+
+        fetch("/me/location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            })
+        });
+
+    }, () => {
+        // best-effort — a stale location is still better than none
+    });
+
+}
+
+refreshLocationIfOptedIn();
 
 async function loadDashboard(){
 
