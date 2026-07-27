@@ -38,7 +38,40 @@
 
 <div class="card">
 
-<h2>➕ Νέο ραντεβού / υπενθύμιση</h2>
+<div class="calendar-header">
+<h2 id="calendar-title"></h2>
+<div class="calendar-nav">
+<button class="btn btn-outline" onclick="changeMonth(-1)">← Προηγούμενος</button>
+<button class="btn btn-outline" onclick="changeMonth(1)">Επόμενος →</button>
+</div>
+</div>
+
+<div class="calendar-grid" id="calendar-weekdays">
+<div class="calendar-weekday">Δε</div>
+<div class="calendar-weekday">Τρ</div>
+<div class="calendar-weekday">Τε</div>
+<div class="calendar-weekday">Πε</div>
+<div class="calendar-weekday">Πα</div>
+<div class="calendar-weekday">Σα</div>
+<div class="calendar-weekday">Κυ</div>
+</div>
+
+<div class="calendar-grid" id="calendar-days"></div>
+
+</div>
+
+<button class="btn btn-auto" onclick="openModal('add-event-modal')">➕ Προσθήκη ραντεβού</button>
+<button class="btn btn-outline btn-auto" style="margin-top:10px;" onclick="openModal('history-modal')">🩺 Ιατρικό ιστορικό</button>
+
+</div>
+</div>
+
+</div>
+
+<div class="modal-overlay" id="add-event-modal">
+<div class="modal-card">
+
+<h2 style="margin-top:0;">➕ Νέο ραντεβού / υπενθύμιση</h2>
 
 <div class="form-grid">
 
@@ -92,46 +125,23 @@
 </div>
 
 <button class="btn btn-auto" onclick="addEvent()">Προσθήκη</button>
+<button class="btn btn-outline btn-auto" style="margin-top:10px;" onclick="closeModal('add-event-modal')">Κλείσιμο</button>
 
 <p id="event-result" class="result-msg"></p>
 
 </div>
-
-<div class="card">
-
-<div class="calendar-header">
-<h2 id="calendar-title"></h2>
-<div class="calendar-nav">
-<button class="btn btn-outline" onclick="changeMonth(-1)">← Προηγούμενος</button>
-<button class="btn btn-outline" onclick="changeMonth(1)">Επόμενος →</button>
-</div>
 </div>
 
-<div class="calendar-grid" id="calendar-weekdays">
-<div class="calendar-weekday">Δε</div>
-<div class="calendar-weekday">Τρ</div>
-<div class="calendar-weekday">Τε</div>
-<div class="calendar-weekday">Πε</div>
-<div class="calendar-weekday">Πα</div>
-<div class="calendar-weekday">Σα</div>
-<div class="calendar-weekday">Κυ</div>
-</div>
+<div class="modal-overlay" id="history-modal">
+<div class="modal-card">
 
-<div class="calendar-grid" id="calendar-days"></div>
-
-</div>
-
-<div class="card">
-
-<h2>📋 Ραντεβού & υπενθυμίσεις μήνα</h2>
+<h2 style="margin-top:0;">🩺 Ιατρικό ιστορικό μήνα</h2>
 
 <div id="events-list">Φόρτωση...</div>
 
-</div>
+<button class="btn btn-outline btn-auto" style="margin-top:14px;" onclick="closeModal('history-modal')">Κλείσιμο</button>
 
 </div>
-</div>
-
 </div>
 
 <script>
@@ -145,6 +155,14 @@ async function logout(){
     await fetch("/logout", { method: "POST" });
     window.location.href = "/login.html";
 
+}
+
+function openModal(id){
+    document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id){
+    document.getElementById(id).style.display = "none";
 }
 
 const TYPE_LABELS = {

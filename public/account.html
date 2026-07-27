@@ -36,11 +36,21 @@
 
 <h1>👤 Λογαριασμός</h1>
 
-<div class="two-col">
+<div class="menu-list">
+<button class="btn btn-outline" onclick="openModal('info-modal')">👤 Στοιχεία λογαριασμού</button>
+<button class="btn btn-outline" onclick="openModal('security-modal')">🔒 Ασφάλεια</button>
+<button class="btn btn-outline" onclick="openModal('family-modal')">👪 Οικογενειακή διαχείριση</button>
+</div>
 
-<div class="card">
+</div>
+</div>
 
-<h2>Στοιχεία προφίλ</h2>
+</div>
+
+<div class="modal-overlay" id="info-modal">
+<div class="modal-card">
+
+<h2 style="margin-top:0;">👤 Στοιχεία λογαριασμού</h2>
 
 <div class="field">
 <label for="first_name">Όνομα</label>
@@ -68,12 +78,23 @@
 </div>
 
 <button class="btn btn-auto" onclick="saveProfile()">Αποθήκευση στοιχείων</button>
+<button class="btn btn-outline btn-auto" style="margin-top:10px;" onclick="closeModal('info-modal')">Κλείσιμο</button>
 
 <p id="profile-result" class="result-msg"></p>
 
 </div>
+</div>
 
-<div class="card">
+<div class="modal-overlay" id="security-modal">
+<div class="modal-card">
+
+<h2 style="margin-top:0;">🔒 Ασφάλεια</h2>
+
+<p id="email-verified-status" class="result-msg" style="margin-top:0;text-align:left;"></p>
+<button class="btn btn-outline btn-auto" id="resend-verification-btn" style="display:none;" onclick="resendVerification()">Ξαναστείλε το email επιβεβαίωσης</button>
+<p id="resend-result" class="result-msg"></p>
+
+<hr style="border:none;border-top:1px solid var(--color-border);margin:20px 0;">
 
 <h2>Αλλαγή κωδικού</h2>
 
@@ -96,30 +117,7 @@
 
 <p id="password-result" class="result-msg"></p>
 
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>👪 Οικογενειακή διαχείριση</h2>
-
-<p>Τα μέλη που προσθέτεις εδώ αποκτούν πλήρη πρόσβαση να διαχειρίζονται τα κατοικίδιά σου (στοιχεία, ραντεβού, δήλωση εξαφάνισης) — σαν συνιδιοκτήτες, χωρίς να χρειάζεται να το αποδεχτούν.</p>
-
-<div class="field">
-<label for="family_email">Email μέλους (πρέπει να έχει ήδη λογαριασμό)</label>
-<input id="family_email" placeholder="email@example.com">
-</div>
-
-<button class="btn btn-auto" onclick="addFamilyMember()">Προσθήκη μέλους</button>
-
-<p id="family-result" class="result-msg"></p>
-
-<ul id="family-list" style="margin-top:14px;list-style:none;padding:0;"></ul>
-
-</div>
-
-<div class="card">
+<hr style="border:none;border-top:1px solid var(--color-border);margin:20px 0;">
 
 <h2>⚠ Διαγραφή λογαριασμού</h2>
 
@@ -134,11 +132,31 @@
 
 <p id="delete-result" class="result-msg"></p>
 
-</div>
+<button class="btn btn-outline btn-auto" style="margin-top:10px;" onclick="closeModal('security-modal')">Κλείσιμο</button>
 
 </div>
 </div>
 
+<div class="modal-overlay" id="family-modal">
+<div class="modal-card">
+
+<h2 style="margin-top:0;">👪 Οικογενειακή διαχείριση</h2>
+
+<p>Τα μέλη που προσθέτεις εδώ αποκτούν πλήρη πρόσβαση να διαχειρίζονται τα κατοικίδιά σου (στοιχεία, ραντεβού, δήλωση εξαφάνισης) — σαν συνιδιοκτήτες, χωρίς να χρειάζεται να το αποδεχτούν.</p>
+
+<div class="field">
+<label for="family_email">Email μέλους (πρέπει να έχει ήδη λογαριασμό)</label>
+<input id="family_email" placeholder="email@example.com">
+</div>
+
+<button class="btn btn-auto" onclick="addFamilyMember()">Προσθήκη μέλους</button>
+<button class="btn btn-outline btn-auto" style="margin-top:10px;" onclick="closeModal('family-modal')">Κλείσιμο</button>
+
+<p id="family-result" class="result-msg"></p>
+
+<ul id="family-list" style="margin-top:14px;list-style:none;padding:0;"></ul>
+
+</div>
 </div>
 
 <script>
@@ -152,6 +170,14 @@ async function logout(){
     await fetch("/logout", { method: "POST" });
     window.location.href = "/login.html";
 
+}
+
+function openModal(id){
+    document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id){
+    document.getElementById(id).style.display = "none";
 }
 
 async function loadProfile(){
@@ -170,6 +196,34 @@ async function loadProfile(){
     document.getElementById("email").value = user.email || "";
     document.getElementById("phone").value = user.phone || "";
     document.getElementById("alt_phone").value = user.alt_phone || "";
+
+    const statusEl = document.getElementById("email-verified-status");
+    const resendBtn = document.getElementById("resend-verification-btn");
+
+    if(user.email_verified){
+        statusEl.textContent = "✅ Το email σου είναι επιβεβαιωμένο.";
+        resendBtn.style.display = "none";
+    } else {
+        statusEl.textContent = "⚠️ Το email σου δεν είναι επιβεβαιωμένο ακόμα.";
+        resendBtn.style.display = "inline-flex";
+    }
+
+}
+
+async function resendVerification(){
+
+    const resultEl = document.getElementById("resend-result");
+    const btn = document.getElementById("resend-verification-btn");
+
+    btn.disabled = true;
+
+    const response = await fetch("/resend-verification-email", { method: "POST" });
+    const text = await response.text();
+
+    resultEl.className = response.ok ? "result-msg success" : "result-msg error";
+    resultEl.innerHTML = response.ok ? "✅ Το email στάλθηκε ξανά — έλεγξε τα εισερχόμενά σου." : text;
+
+    btn.disabled = false;
 
 }
 
