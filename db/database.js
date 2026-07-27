@@ -263,6 +263,20 @@ pool.connect()
 
         }
 
+        try {
+
+            // Fallback when the reporter doesn't want to share GPS — the one
+            // free-text field on this endpoint, length-capped server-side.
+            await pool.query(
+                "ALTER TABLE pet_sightings ADD COLUMN IF NOT EXISTS address VARCHAR(150)"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pet_sightings.address):", error.message);
+
+        }
+
     })
     .catch((error) => {
 

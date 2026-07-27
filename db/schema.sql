@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS pet_sightings (
     condition VARCHAR(20) NOT NULL DEFAULT 'unknown',
     lat DOUBLE PRECISION,
     lng DOUBLE PRECISION,
+    address VARCHAR(150),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

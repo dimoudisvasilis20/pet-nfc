@@ -840,16 +840,18 @@ router.get("/pets/lost/nearby", async (req, res) => {
 REPORT A SIGHTING OF A LOST PET
 A stranger (not the tag holder) saying "I think I saw this pet" from the
 "Χαμένα κοντά μου" list/map. Restricted to email-verified accounts and
-structured to fixed choices (no free text) — kept simple on purpose,
-since an open message field is the easiest way to turn this into a vector
-for confusing or harassing the owner. Location is the reporter's own
-device GPS at submit time, same pattern as the scan page's "share my
-location" — not a typed-in address.
+structured to fixed choices for certainty/recency/condition (no free
+text there — that's the easiest way to turn this into a vector for
+confusing or harassing the owner). Location is either the reporter's own
+device GPS at submit time (same pattern as the scan page's "share my
+location"), or — if they don't want to share GPS — a short typed address,
+capped in length since it's the one free-text field here.
 ========================================
 */
 
 const SIGHTING_RECENCY = ["just_now", "few_hours_ago", "yesterday_or_earlier"];
 const SIGHTING_CONDITION = ["seemed_fine", "seemed_injured", "unknown"];
+const SIGHTING_ADDRESS_MAX_LENGTH = 150;
 
 const RECENCY_LABEL = {
     just_now: "μόλις τώρα",
@@ -859,7 +861,8 @@ const RECENCY_LABEL = {
 
 router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
 
-    const { certainty, recency, condition, lat, lng } = req.body;
+    const { certainty, recency, condition, lat, lng, address } = req.body;
+    const trimmedAddress = typeof address === "string" ? address.trim().slice(0, SIGHTING_ADDRESS_MAX_LENGTH) : "";
 
     if (certainty !== "sure" && certainty !== "maybe") {
 
@@ -876,6 +879,14 @@ router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
     if (!SIGHTING_CONDITION.includes(condition)) {
 
         return res.status(400).send("condition must be one of: " + SIGHTING_CONDITION.join(", "));
+
+    }
+
+    const hasCoords = typeof lat === "number" && typeof lng === "number";
+
+    if (!hasCoords && !trimmedAddress) {
+
+        return res.status(400).send("Χρειάζεται είτε τοποθεσία (GPS) είτε διεύθυνση.");
 
     }
 
@@ -918,15 +929,28 @@ router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
         await pool.query(
             `
             INSERT INTO pet_sightings
-            (pet_id, reporter_user_id, certainty, recency, condition, lat, lng)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (pet_id, reporter_user_id, certainty, recency, condition, lat, lng, address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             `,
-            [req.params.id, req.session.user_id, certainty, recency, condition, lat ?? null, lng ?? null]
+            [
+                req.params.id,
+                req.session.user_id,
+                certainty,
+                recency,
+                condition,
+                hasCoords ? lat : null,
+                hasCoords ? lng : null,
+                trimmedAddress || null
+            ]
         );
 
         const conditionNote = condition === "seemed_injured"
             ? " Φαινόταν τραυματισμένο/άρρωστο!"
             : "";
+
+        const locationNote = hasCoords
+            ? ""
+            : ` Διεύθυνση: ${trimmedAddress}.`;
 
         await createNotification(
             pet.rows[0].user_id,
@@ -934,8 +958,17 @@ router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
             (certainty === "sure"
                 ? `Κάποιος είναι σίγουρος ότι είδε το ${pet.rows[0].name}`
                 : `Κάποιος νομίζει ότι είδε το ${pet.rows[0].name}`)
-                + ` (${RECENCY_LABEL[recency]}).${conditionNote}`,
-            { type: "pet_sighting", petId: pet.rows[0].id, certainty, recency, condition, lat: lat ?? null, lng: lng ?? null }
+                + ` (${RECENCY_LABEL[recency]}).${conditionNote}${locationNote}`,
+            {
+                type: "pet_sighting",
+                petId: pet.rows[0].id,
+                certainty,
+                recency,
+                condition,
+                lat: hasCoords ? lat : null,
+                lng: hasCoords ? lng : null,
+                address: trimmedAddress || null
+            }
         );
 
         res.json({ message: "Sighting reported" });
