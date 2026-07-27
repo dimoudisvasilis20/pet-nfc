@@ -63,6 +63,14 @@
 </div>
 </div>
 
+<div class="modal-overlay" id="sighting-details-modal">
+<div class="modal-card">
+<h2 style="margin-top:0;">👁️ Στοιχεία αναφοράς θέασης</h2>
+<div id="sighting-details-body"></div>
+<button class="btn btn-outline btn-auto" style="margin-top:14px;" onclick="closeModal('sighting-details-modal')">Κλείσιμο</button>
+</div>
+</div>
+
 </div>
 
 <script>
@@ -76,6 +84,14 @@ async function logout(){
     await fetch("/logout", { method: "POST" });
     window.location.href = "/login.html";
 
+}
+
+function openModal(id){
+    document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id){
+    document.getElementById(id).style.display = "none";
 }
 
 // "Τελευταίες σαρώσεις" used to be its own sidebar destination — folded in
@@ -240,8 +256,47 @@ async function openNotification(id){
         return;
     }
 
+    if(data.type === "pet_sighting"){
+        openSightingDetails(data);
+        return;
+    }
+
     // Anything else (calendar_reminder, or an unrecognized future type)
     // has nowhere more specific to go — stay on this page.
+
+}
+
+const CERTAINTY_LABEL = {
+    sure: "✅ Σίγουρα το είδε",
+    maybe: "🤔 Νομίζει πως το είδε",
+};
+
+const RECENCY_LABEL = {
+    just_now: "🕒 Μόλις τώρα",
+    few_hours_ago: "⏱️ Πριν λίγες ώρες",
+    yesterday_or_earlier: "📅 Χθες ή παλιότερα",
+};
+
+const CONDITION_LABEL = {
+    seemed_fine: "😊 Φαινόταν καλά",
+    seemed_injured: "🤕 Τραυματισμένο/άρρωστο",
+    unknown: "🤷 Δεν πρόσεξε",
+};
+
+function openSightingDetails(data){
+
+    const locationHtml = (data.lat && data.lng)
+        ? `<a href="https://www.google.com/maps?q=${data.lat},${data.lng}" target="_blank" rel="noopener">📍 Δες την τοποθεσία στον χάρτη</a>`
+        : (data.address ? `📍 ${data.address}` : "");
+
+    document.getElementById("sighting-details-body").innerHTML = `
+        <p style="margin:0 0 12px;">${CERTAINTY_LABEL[data.certainty] || data.certainty}</p>
+        <p style="margin:0 0 12px;">${RECENCY_LABEL[data.recency] || data.recency}</p>
+        <p style="margin:0 0 12px;">${CONDITION_LABEL[data.condition] || data.condition}</p>
+        <p style="margin:0;">${locationHtml}</p>
+    `;
+
+    openModal("sighting-details-modal");
 
 }
 
