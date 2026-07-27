@@ -837,6 +837,88 @@ router.get("/pets/lost/nearby", async (req, res) => {
 
 /*
 ========================================
+REPORT A SIGHTING OF A LOST PET
+A stranger (not the tag holder) saying "I think I saw this pet" from the
+"Χαμένα κοντά μου" list/map. Restricted to email-verified accounts and
+structured to a certainty choice (no free text) — kept simple on purpose,
+since an open message field is the easiest way to turn this into a vector
+for confusing or harassing the owner.
+========================================
+*/
+
+router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
+
+    const { certainty } = req.body;
+
+    if (certainty !== "sure" && certainty !== "maybe") {
+
+        return res.status(400).send("certainty must be 'sure' or 'maybe'");
+
+    }
+
+    try {
+
+        const reporter = await pool.query(
+            "SELECT email_verified FROM users WHERE id=$1",
+            [req.session.user_id]
+        );
+
+        if (!reporter.rows[0]?.email_verified) {
+
+            return res.status(403).send("Χρειάζεται επιβεβαιωμένο email για να κάνεις αναφορά θέασης.");
+
+        }
+
+        const pet = await pool.query(
+            "SELECT id, name, user_id, is_lost FROM pets WHERE id=$1",
+            [req.params.id]
+        );
+
+        if (pet.rows.length === 0) {
+
+            return res.status(404).send("Pet not found");
+
+        }
+
+        if (!pet.rows[0].is_lost) {
+
+            return res.status(400).send("Αυτό το κατοικίδιο δεν είναι δηλωμένο χαμένο.");
+
+        }
+
+        if (pet.rows[0].user_id === req.session.user_id) {
+
+            return res.status(400).send("Δεν μπορείς να αναφέρεις θέαση για το δικό σου κατοικίδιο.");
+
+        }
+
+        await pool.query(
+            "INSERT INTO pet_sightings (pet_id, reporter_user_id, certainty) VALUES ($1, $2, $3)",
+            [req.params.id, req.session.user_id, certainty]
+        );
+
+        await createNotification(
+            pet.rows[0].user_id,
+            "👁️ Αναφορά θέασης",
+            certainty === "sure"
+                ? `Κάποιος είναι σίγουρος ότι είδε το ${pet.rows[0].name}!`
+                : `Κάποιος νομίζει ότι είδε το ${pet.rows[0].name}.`,
+            { type: "pet_sighting", petId: pet.rows[0].id, certainty }
+        );
+
+        res.json({ message: "Sighting reported" });
+
+    } catch (error) {
+
+        logError(error);
+        res.status(500).send("Sighting report error");
+
+    }
+
+});
+
+/*
+========================================
 PAIR AN NFC TAG TO A PET
 Registers the pet's tag using whichever identifier
 the caller has available:

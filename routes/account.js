@@ -26,6 +26,7 @@ router.get("/me", requireLogin, async (req, res) => {
                 users.phone,
                 users.alt_phone,
                 users.created_at,
+                users.email_verified,
                 (users.push_token IS NOT NULL) AS push_enabled,
                 (user_locations.user_id IS NOT NULL) AS location_shared
             FROM users

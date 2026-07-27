@@ -147,5 +147,18 @@ CREATE TABLE IF NOT EXISTS pet_shares (
 CREATE INDEX IF NOT EXISTS idx_pet_shares_owner_id ON pet_shares(owner_id);
 CREATE INDEX IF NOT EXISTS idx_pet_shares_member_id ON pet_shares(member_id);
 
+-- A stranger (not the tag holder) reporting "I think I saw this lost pet" —
+-- restricted to email-verified reporters (enforced in POST /pets/:id/sightings)
+-- so it isn't a fully anonymous vector for confusing/harassing an owner.
+CREATE TABLE IF NOT EXISTS pet_sightings (
+    id SERIAL PRIMARY KEY,
+    pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+    reporter_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    certainty VARCHAR(10) NOT NULL CHECK (certainty IN ('sure', 'maybe')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pet_sightings_pet_id ON pet_sightings(pet_id);
+
 -- First account you register becomes a regular user; promote yourself to admin with:
 --   UPDATE users SET role = 'admin' WHERE email = 'you@example.com';

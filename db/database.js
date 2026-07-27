@@ -212,6 +212,30 @@ pool.connect()
 
         }
 
+        try {
+
+            // A stranger (not the tag holder) reporting "I think I saw this
+            // lost pet" — restricted to email-verified accounts so it isn't
+            // a fully anonymous vector for confusing/harassing an owner.
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS pet_sightings (
+                    id SERIAL PRIMARY KEY,
+                    pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+                    reporter_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    certainty VARCHAR(10) NOT NULL CHECK (certainty IN ('sure', 'maybe')),
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            `);
+            await pool.query(
+                "CREATE INDEX IF NOT EXISTS idx_pet_sightings_pet_id ON pet_sightings(pet_id)"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pet_sightings table):", error.message);
+
+        }
+
     })
     .catch((error) => {
 
