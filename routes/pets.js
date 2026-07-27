@@ -840,19 +840,42 @@ router.get("/pets/lost/nearby", async (req, res) => {
 REPORT A SIGHTING OF A LOST PET
 A stranger (not the tag holder) saying "I think I saw this pet" from the
 "Χαμένα κοντά μου" list/map. Restricted to email-verified accounts and
-structured to a certainty choice (no free text) — kept simple on purpose,
+structured to fixed choices (no free text) — kept simple on purpose,
 since an open message field is the easiest way to turn this into a vector
-for confusing or harassing the owner.
+for confusing or harassing the owner. Location is the reporter's own
+device GPS at submit time, same pattern as the scan page's "share my
+location" — not a typed-in address.
 ========================================
 */
 
+const SIGHTING_RECENCY = ["just_now", "few_hours_ago", "yesterday_or_earlier"];
+const SIGHTING_CONDITION = ["seemed_fine", "seemed_injured", "unknown"];
+
+const RECENCY_LABEL = {
+    just_now: "μόλις τώρα",
+    few_hours_ago: "πριν λίγες ώρες",
+    yesterday_or_earlier: "χθες ή παλιότερα",
+};
+
 router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
 
-    const { certainty } = req.body;
+    const { certainty, recency, condition, lat, lng } = req.body;
 
     if (certainty !== "sure" && certainty !== "maybe") {
 
         return res.status(400).send("certainty must be 'sure' or 'maybe'");
+
+    }
+
+    if (!SIGHTING_RECENCY.includes(recency)) {
+
+        return res.status(400).send("recency must be one of: " + SIGHTING_RECENCY.join(", "));
+
+    }
+
+    if (!SIGHTING_CONDITION.includes(condition)) {
+
+        return res.status(400).send("condition must be one of: " + SIGHTING_CONDITION.join(", "));
 
     }
 
@@ -893,17 +916,26 @@ router.post("/pets/:id/sightings", requireLogin, async (req, res) => {
         }
 
         await pool.query(
-            "INSERT INTO pet_sightings (pet_id, reporter_user_id, certainty) VALUES ($1, $2, $3)",
-            [req.params.id, req.session.user_id, certainty]
+            `
+            INSERT INTO pet_sightings
+            (pet_id, reporter_user_id, certainty, recency, condition, lat, lng)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `,
+            [req.params.id, req.session.user_id, certainty, recency, condition, lat ?? null, lng ?? null]
         );
+
+        const conditionNote = condition === "seemed_injured"
+            ? " Φαινόταν τραυματισμένο/άρρωστο!"
+            : "";
 
         await createNotification(
             pet.rows[0].user_id,
-            "👁️ Αναφορά θέασης",
-            certainty === "sure"
-                ? `Κάποιος είναι σίγουρος ότι είδε το ${pet.rows[0].name}!`
-                : `Κάποιος νομίζει ότι είδε το ${pet.rows[0].name}.`,
-            { type: "pet_sighting", petId: pet.rows[0].id, certainty }
+            condition === "seemed_injured" ? "🚨 Αναφορά θέασης" : "👁️ Αναφορά θέασης",
+            (certainty === "sure"
+                ? `Κάποιος είναι σίγουρος ότι είδε το ${pet.rows[0].name}`
+                : `Κάποιος νομίζει ότι είδε το ${pet.rows[0].name}`)
+                + ` (${RECENCY_LABEL[recency]}).${conditionNote}`,
+            { type: "pet_sighting", petId: pet.rows[0].id, certainty, recency, condition, lat: lat ?? null, lng: lng ?? null }
         );
 
         res.json({ message: "Sighting reported" });

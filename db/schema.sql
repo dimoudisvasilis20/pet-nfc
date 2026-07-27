@@ -149,12 +149,20 @@ CREATE INDEX IF NOT EXISTS idx_pet_shares_member_id ON pet_shares(member_id);
 
 -- A stranger (not the tag holder) reporting "I think I saw this lost pet" —
 -- restricted to email-verified reporters (enforced in POST /pets/:id/sightings)
--- so it isn't a fully anonymous vector for confusing/harassing an owner.
+-- so it isn't a fully anonymous vector for confusing/harassing an owner. All
+-- fields are fixed-choice (no free text), including recency/condition — an
+-- open message field is the easiest way to turn this into a vector for
+-- confusing or harassing the owner. lat/lng are the reporter's own GPS
+-- position at submit time, not a typed-in address.
 CREATE TABLE IF NOT EXISTS pet_sightings (
     id SERIAL PRIMARY KEY,
     pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
     reporter_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     certainty VARCHAR(10) NOT NULL CHECK (certainty IN ('sure', 'maybe')),
+    recency VARCHAR(20) NOT NULL DEFAULT 'just_now',
+    condition VARCHAR(20) NOT NULL DEFAULT 'unknown',
+    lat DOUBLE PRECISION,
+    lng DOUBLE PRECISION,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

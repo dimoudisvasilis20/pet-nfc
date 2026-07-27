@@ -236,6 +236,33 @@ pool.connect()
 
         }
 
+        try {
+
+            // When the reporter saw it (their own choice, not just "now" —
+            // they might be reporting something from earlier), how the pet
+            // seemed, and the reporter's own GPS position at submit time
+            // (same pattern as the scan page's "share my location", not a
+            // typed-in address). All fixed-choice, no free text — see the
+            // comment on POST /pets/:id/sightings for why.
+            await pool.query(
+                "ALTER TABLE pet_sightings ADD COLUMN IF NOT EXISTS recency VARCHAR(20) NOT NULL DEFAULT 'just_now'"
+            );
+            await pool.query(
+                "ALTER TABLE pet_sightings ADD COLUMN IF NOT EXISTS condition VARCHAR(20) NOT NULL DEFAULT 'unknown'"
+            );
+            await pool.query(
+                "ALTER TABLE pet_sightings ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION"
+            );
+            await pool.query(
+                "ALTER TABLE pet_sightings ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION"
+            );
+
+        } catch (error) {
+
+            console.log("❌ Migration error (pet_sightings recency/condition/lat/lng):", error.message);
+
+        }
+
     })
     .catch((error) => {
 
