@@ -17,11 +17,9 @@
 <div class="app-sidebar">
 <a class="brand" href="/dashboard.html"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="22" height="22"> PawTrace</a>
 <div class="nav-links">
-<a href="/dashboard.html">🐾 Τα κατοικίδιά μου</a>
+<a href="/dashboard.html">🐾 Κατοικίδια</a>
 <a href="/calendar.html">📅 Ημερολόγιο</a>
-<a href="/add-pet.html">➕ Προσθήκη κατοικιδίου</a>
 <a href="/lost-pets.html">🔎 Χαμένα κοντά μου</a>
-<a href="/scans.html">📍 Τελευταίες σαρώσεις</a>
 <a href="/notifications.html" class="active">🔔 Ειδοποιήσεις</a>
 <a href="/account.html">👤 Λογαριασμός</a>
 </div>
@@ -38,8 +36,17 @@
 
 <h1>🔔 Ειδοποιήσεις</h1>
 
-<div class="card">
+<div class="choice-row">
+<button type="button" class="choice-btn active" id="segment-notifications-btn" onclick="showSegment('notifications')">🔔 Ειδοποιήσεις</button>
+<button type="button" class="choice-btn" id="segment-scans-btn" onclick="showSegment('scans')">📍 Σαρώσεις</button>
+</div>
+
+<div class="card" id="segment-notifications">
 <div id="notifications">Φόρτωση...</div>
+</div>
+
+<div class="card" id="segment-scans" style="display:none;">
+<div id="scans">Φόρτωση...</div>
 </div>
 
 </div>
@@ -68,6 +75,68 @@ async function logout(){
 
     await fetch("/logout", { method: "POST" });
     window.location.href = "/login.html";
+
+}
+
+// "Τελευταίες σαρώσεις" used to be its own sidebar destination — folded in
+// here as a second segment, mirroring the mobile app (see
+// mobile/src/screens/NotificationsScreen.js), since a scan is what
+// triggers a notification in the first place.
+function showSegment(name){
+
+    document.getElementById("segment-notifications").style.display = name === "notifications" ? "block" : "none";
+    document.getElementById("segment-scans").style.display = name === "scans" ? "block" : "none";
+    document.getElementById("segment-notifications-btn").classList.toggle("active", name === "notifications");
+    document.getElementById("segment-scans-btn").classList.toggle("active", name === "scans");
+
+    if (name === "scans") {
+        loadScans();
+    }
+
+}
+
+async function loadScans(){
+
+    const response = await fetch("/scans");
+
+    if(response.status === 401){
+        window.location.href = "/login.html";
+        return;
+    }
+
+    const scans = await response.json();
+
+    if(scans.length === 0){
+        document.getElementById("scans").innerHTML =
+            `<p class="empty-state">Δεν υπάρχουν σαρώσεις ακόμα.</p>`;
+        return;
+    }
+
+    let html = "";
+
+    scans.forEach(scan => {
+
+        html += `
+
+<div class="scan-row">
+
+🐕 ${scan.pet_name}
+
+<br>
+
+📅 ${scan.scanned_at ? new Date(scan.scanned_at).toLocaleString("el-GR") : ""}
+
+<br>
+
+📱 ${scan.device || ""}
+
+</div>
+
+`;
+
+    });
+
+    document.getElementById("scans").innerHTML = html;
 
 }
 
@@ -162,7 +231,7 @@ async function openNotification(id){
     }
 
     if(data.type === "nfc_scan"){
-        window.location.href = "/scans.html";
+        showSegment("scans");
         return;
     }
 
