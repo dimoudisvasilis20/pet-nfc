@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const pool = require("../db/database");
+const requireLogin = require("../middleware/auth");
 const { sendWelcomeEmail } = require("../utils/email");
 const { logError } = require("../utils/errorReporting");
 const { getGoogleAuthUrl, getGoogleProfile, verifyGoogleIdToken, findOrCreateGoogleUser } = require("../utils/googleAuth");
@@ -68,7 +69,7 @@ router.post("/register", async (req, res) => {
 
         } catch (emailError) {
 
-            console.log("❌ Welcome email error:", emailError.message);
+            logError(emailError);
 
         }
 
@@ -123,6 +124,60 @@ router.get("/verify-email", async (req, res) => {
 
         logError(error);
         res.status(500).json({ message: "Σφάλμα επιβεβαίωσης email" });
+
+    }
+
+});
+
+/*
+========================================
+RESEND VERIFICATION EMAIL
+Settings > Ασφάλεια shows this only while the account is unverified — the
+original email at registration is best-effort and can fail silently
+(missing/misconfigured Resend setup), so this is the user's only way to
+get another one without contacting support.
+========================================
+*/
+
+router.post("/resend-verification-email", requireLogin, async (req, res) => {
+
+    try {
+
+        const user = await pool.query(
+            "SELECT first_name, email, email_verified FROM users WHERE id=$1",
+            [req.session.user_id]
+        );
+
+        if (user.rows.length === 0) {
+
+            return res.status(404).send("User not found");
+
+        }
+
+        if (user.rows[0].email_verified) {
+
+            return res.status(400).send("Το email σου είναι ήδη επιβεβαιωμένο.");
+
+        }
+
+        // Fresh token each time — the old one (if the first email did
+        // arrive) should stop working once a new one is issued.
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+
+        await pool.query(
+            "UPDATE users SET email_verification_token=$1 WHERE id=$2",
+            [verificationToken, req.session.user_id]
+        );
+
+        const verifyUrl = `${process.env.APP_BASE_URL || ""}/verify-email.html?token=${verificationToken}`;
+        await sendWelcomeEmail(user.rows[0].email, user.rows[0].first_name, verifyUrl);
+
+        res.json({ message: "Το email επιβεβαίωσης στάλθηκε ξανά." });
+
+    } catch (error) {
+
+        logError(error);
+        res.status(500).send("Δεν ήταν δυνατή η αποστολή του email. Δοκίμασε ξανά σε λίγο.");
 
     }
 

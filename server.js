@@ -137,7 +137,7 @@ const authLimiter = rateLimit({
     message: "Πολλές προσπάθειες — δοκίμασε ξανά σε λίγα λεπτά.",
 });
 
-app.use(["/login", "/register", "/auth/google/mobile"], authLimiter);
+app.use(["/login", "/register", "/auth/google/mobile", "/resend-verification-email"], authLimiter);
 
 // /p/:code (NFC tag scans) and /pets/lost/nearby are public and
 // unauthenticated by design — anyone can hit them without an account, which
