@@ -55,6 +55,71 @@
 
 </div>
 
+<div id="sighting-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:100;">
+<div style="background:var(--color-surface,#fff);border-radius:var(--radius,12px);padding:24px;max-width:420px;width:90%;max-height:85vh;overflow-y:auto;">
+
+<h2 style="margin-top:0;">👁️ Ανέφερε ότι είδες το <span id="sighting-pet-name"></span></h2>
+
+<label>Πόσο σίγουρος είσαι;</label>
+<div class="choice-row" id="sighting-certainty">
+<button type="button" class="choice-btn" data-value="sure">✅ Σίγουρα το είδα</button>
+<button type="button" class="choice-btn" data-value="maybe">🤔 Νομίζω πως το είδα</button>
+</div>
+
+<label>Πότε το είδες;</label>
+<div class="choice-row" id="sighting-recency">
+<button type="button" class="choice-btn" data-value="just_now">🕒 Μόλις τώρα</button>
+<button type="button" class="choice-btn" data-value="few_hours_ago">⏱️ Πριν λίγες ώρες</button>
+<button type="button" class="choice-btn" data-value="yesterday_or_earlier">📅 Χθες ή παλιότερα</button>
+</div>
+
+<label>Πώς φαινόταν;</label>
+<div class="choice-row" id="sighting-condition">
+<button type="button" class="choice-btn" data-value="seemed_fine">😊 Φαινόταν καλά</button>
+<button type="button" class="choice-btn" data-value="seemed_injured">🤕 Τραυματισμένο/άρρωστο</button>
+<button type="button" class="choice-btn" data-value="unknown">🤷 Δεν πρόσεξα</button>
+</div>
+
+<label>Τοποθεσία</label>
+<div class="choice-row" id="sighting-location-mode">
+<button type="button" class="choice-btn" data-value="gps">📍 Η τοποθεσία μου</button>
+<button type="button" class="choice-btn" data-value="address">✏️ Διεύθυνση</button>
+</div>
+
+<p id="sighting-location-hint" class="result-msg" style="margin:0 0 16px;text-align:left;"></p>
+
+<div class="field" id="sighting-address-field" style="display:none;">
+<input id="sighting-address" placeholder="π.χ. Πλατεία Συντάγματος, Αθήνα">
+</div>
+
+<p id="sighting-error" class="result-msg error" style="display:none;"></p>
+
+<button class="btn" onclick="submitSighting()">Αποστολή αναφοράς</button>
+<button class="btn btn-outline" style="margin-top:10px;" onclick="closeSightingModal()">Άκυρο</button>
+
+</div>
+</div>
+
+<style>
+.choice-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.choice-btn{
+    width:auto;
+    padding:8px 14px;
+    border:1px solid var(--color-border);
+    border-radius:999px;
+    background:var(--color-surface);
+    color:var(--color-text);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+}
+.choice-btn.active{
+    background:var(--color-primary);
+    border-color:var(--color-primary);
+    color:#fff;
+}
+</style>
+
 <script>
 
 async function logout(){
@@ -69,6 +134,9 @@ async function logout(){
 }
 
 let myPosition = null;
+let me = null;
+
+fetch("/me").then(r => r.ok ? r.json() : null).then(data => { me = data; }).catch(() => {});
 
 function loadNearby(){
 
@@ -114,9 +182,12 @@ ${pet.photo ? `<img class="pet-card-photo" src="${pet.photo}" alt="${pet.name}">
 
 ${pet.lost_at ? `<div class="lost-meta">🕒 Εξαφανίστηκε: ${new Date(pet.lost_at).toLocaleString("el-GR", { dateStyle: "medium", timeStyle: "short" })}</div>` : ""}
 
-<div class="lost-meta">📍 <a href="https://www.google.com/maps?q=${pet.last_seen_lat},${pet.last_seen_lng}" target="_blank" rel="noopener">Τελευταία γνωστή τοποθεσία</a></div>
-
 ${pet.reward ? `<div class="lost-meta reward">🎁 Αμοιβή: ${pet.reward}</div>` : ""}
+
+<div style="display:flex;gap:16px;margin-top:8px;">
+<a href="https://www.google.com/maps?q=${pet.last_seen_lat},${pet.last_seen_lng}" target="_blank" rel="noopener">🗺️ Δες στον χάρτη</a>
+<a href="#" onclick="openSightingModal(${pet.id}, '${pet.name.replace(/'/g, "\\'")}'); return false;">👁️ Ανέφερε ότι το είδες</a>
+</div>
 
 </div>
 
@@ -168,6 +239,134 @@ else{
 document.getElementById("results").innerHTML =
 
 `<p class="empty-state">Ο browser σου δεν υποστηρίζει τοποθεσία.</p>`;
+
+}
+
+// --- sighting report modal ---
+
+let sightingPetId = null;
+const sightingChoices = { certainty: null, recency: null, condition: null, locationMode: null };
+
+function selectChoice(groupId, key, value){
+
+    sightingChoices[key] = value;
+
+    document.querySelectorAll(`#${groupId} .choice-btn`).forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.value === value);
+    });
+
+    if (key === "locationMode") {
+
+        const addressField = document.getElementById("sighting-address-field");
+        const hint = document.getElementById("sighting-location-hint");
+
+        if (value === "address") {
+            addressField.style.display = "block";
+            hint.textContent = "";
+        } else {
+            addressField.style.display = "none";
+            hint.textContent = myPosition ? "Θα σταλεί η τρέχουσα τοποθεσία σου." : "Δεν υπάρχει διαθέσιμη τοποθεσία GPS — διάλεξε \"Διεύθυνση\".";
+        }
+
+    }
+
+}
+
+["sighting-certainty", "sighting-recency", "sighting-condition", "sighting-location-mode"].forEach((groupId) => {
+
+    const key = { "sighting-certainty": "certainty", "sighting-recency": "recency", "sighting-condition": "condition", "sighting-location-mode": "locationMode" }[groupId];
+
+    document.querySelectorAll(`#${groupId} .choice-btn`).forEach((btn) => {
+        btn.addEventListener("click", () => selectChoice(groupId, key, btn.dataset.value));
+    });
+
+});
+
+function openSightingModal(petId, petName){
+
+    if (!me) {
+        alert("Πρέπει να έχεις συνδεθεί για να κάνεις αναφορά.");
+        return;
+    }
+
+    if (!me.email_verified) {
+        alert("Μόνο επιβεβαιωμένοι χρήστες μπορούν να κάνουν αναφορά θέασης — επιβεβαίωσε το email σου πρώτα.");
+        return;
+    }
+
+    sightingPetId = petId;
+    document.getElementById("sighting-pet-name").textContent = petName;
+    document.getElementById("sighting-address").value = "";
+    document.getElementById("sighting-error").style.display = "none";
+
+    sightingChoices.certainty = null;
+    sightingChoices.recency = null;
+    sightingChoices.condition = null;
+    sightingChoices.locationMode = myPosition ? "gps" : "address";
+
+    document.querySelectorAll(".choice-btn").forEach((btn) => btn.classList.remove("active"));
+    selectChoice("sighting-location-mode", "locationMode", sightingChoices.locationMode);
+
+    document.getElementById("sighting-overlay").style.display = "flex";
+
+}
+
+function closeSightingModal(){
+    document.getElementById("sighting-overlay").style.display = "none";
+}
+
+async function submitSighting(){
+
+    const errorEl = document.getElementById("sighting-error");
+    errorEl.style.display = "none";
+
+    if (!sightingChoices.certainty || !sightingChoices.recency || !sightingChoices.condition) {
+        errorEl.textContent = "Συμπλήρωσε όλες τις παραπάνω επιλογές.";
+        errorEl.style.display = "block";
+        return;
+    }
+
+    const address = document.getElementById("sighting-address").value.trim();
+
+    if (sightingChoices.locationMode === "gps" && !myPosition) {
+        errorEl.textContent = "Δεν υπάρχει διαθέσιμη τοποθεσία GPS — διάλεξε \"Διεύθυνση\".";
+        errorEl.style.display = "block";
+        return;
+    }
+
+    if (sightingChoices.locationMode === "address" && !address) {
+        errorEl.textContent = "Γράψε μια διεύθυνση.";
+        errorEl.style.display = "block";
+        return;
+    }
+
+    const body = {
+        certainty: sightingChoices.certainty,
+        recency: sightingChoices.recency,
+        condition: sightingChoices.condition,
+    };
+
+    if (sightingChoices.locationMode === "gps") {
+        body.lat = myPosition.lat;
+        body.lng = myPosition.lng;
+    } else {
+        body.address = address;
+    }
+
+    const response = await fetch(`/pets/${sightingPetId}/sightings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        errorEl.textContent = await response.text();
+        errorEl.style.display = "block";
+        return;
+    }
+
+    closeSightingModal();
+    alert("Ευχαριστούμε! Ο ιδιοκτήτης ειδοποιήθηκε για την αναφορά σου.");
 
 }
 
