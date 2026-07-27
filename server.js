@@ -145,7 +145,10 @@ app.use(["/login", "/register", "/auth/google/mobile"], authLimiter);
 // genuinely scanning tags or browsing nearby lost pets never notices it.
 const publicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 300,
+    // Overridable so a local load test can raise it far past what any real
+    // client would ever need, to measure the app's own capacity instead of
+    // just re-confirming the limiter fires.
+    limit: parseInt(process.env.PUBLIC_RATE_LIMIT, 10) || 300,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Πάρα πολλά requests από αυτή τη συσκευή — δοκίμασε ξανά σε λίγο.",
