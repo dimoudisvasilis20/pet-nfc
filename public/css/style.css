@@ -1159,3 +1159,66 @@ textarea{
         font-size:10px;
     }
 }
+
+/* On a phone, the desktop-width left sidebar just got crushed into a
+   sliver — turn it into a bottom tab bar instead, matching how the
+   mobile app itself navigates (icon-first, no room for a permanent
+   side column). Same breakpoint the mobile app's own web build uses
+   to switch between its sidebar and tab bar. */
+@media (max-width:768px){
+    .app-shell{
+        flex-direction:column;
+    }
+
+    .app-sidebar{
+        position:fixed;
+        bottom:0;
+        left:0;
+        right:0;
+        top:auto;
+        width:100%;
+        height:auto;
+        flex-direction:row;
+        align-items:stretch;
+        justify-content:space-around;
+        gap:0;
+        padding:6px 0;
+        border-right:none;
+        border-top:1px solid var(--color-border);
+        overflow-x:hidden;
+        z-index:50;
+    }
+
+    .app-sidebar .brand{
+        display:none;
+    }
+
+    .app-sidebar .nav-links{
+        flex-direction:row;
+        width:100%;
+        gap:0;
+    }
+
+    .app-sidebar .nav-links a{
+        flex-direction:column;
+        flex:1 1 0;
+        min-width:0;
+        align-items:center;
+        justify-content:center;
+        gap:0;
+        padding:6px 1px;
+        font-size:9px;
+        line-height:1.2;
+        text-align:center;
+        word-break:break-word;
+        border-radius:var(--radius-sm);
+    }
+
+    .app-sidebar .nav-links a.active{
+        box-shadow:none;
+    }
+
+    .app-main{
+        padding-bottom:64px;
+    }
+}
