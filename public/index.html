@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+
+<meta charset="UTF-8">
+<title>PawTrace — Το ψηφιακό ID του κατοικιδίου σου</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Ένα NFC tag στο κολάρο του κατοικιδίου σου — όποιος το βρει σαρώνει και σε καλεί αμέσως, χωρίς app ή λογαριασμό.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/css/style.css">
+
+<style>
+
+.landing-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    max-width:1080px;
+    margin:0 auto;
+    padding:20px 24px;
+}
+
+.landing-nav .nav-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.landing-nav .btn{
+    width:auto;
+    padding:10px 20px;
+}
+
+.landing-hero{
+    max-width:1080px;
+    margin:0 auto;
+    padding:20px 24px 60px;
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:48px;
+    align-items:center;
+}
+
+.landing-hero h1{
+    font-size:42px;
+    line-height:1.15;
+    margin-bottom:16px;
+}
+
+.landing-hero h1 span{
+    background:var(--gradient-primary);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+.landing-hero p{
+    font-size:17px;
+    color:var(--color-text-muted);
+    max-width:460px;
+}
+
+.landing-hero .cta-row{
+    display:flex;
+    gap:12px;
+    margin-top:24px;
+}
+
+.landing-hero .cta-row .btn{
+    width:auto;
+    padding:14px 26px;
+}
+
+.landing-hero-img{
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg);
+    overflow:hidden;
+    aspect-ratio:7/5;
+}
+
+.landing-hero-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+.landing-section{
+    max-width:1080px;
+    margin:0 auto;
+    padding:40px 24px;
+}
+
+.landing-section h2{
+    font-size:28px;
+    text-align:center;
+    margin-bottom:8px;
+}
+
+.landing-section .section-sub{
+    text-align:center;
+    color:var(--color-text-muted);
+    max-width:520px;
+    margin:0 auto 36px;
+}
+
+.steps-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+.step-card{
+    text-align:center;
+    padding:28px 20px;
+}
+
+.step-card .step-icon{
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    background:var(--color-primary-light);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    margin:0 auto 16px;
+}
+
+.step-card h3{
+    font-size:17px;
+    margin-bottom:6px;
+}
+
+.step-card p{
+    font-size:14px;
+    color:var(--color-text-muted);
+    margin:0;
+}
+
+.showcase-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+}
+
+.showcase-card{
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    background:var(--color-surface);
+    box-shadow:var(--shadow);
+}
+
+.showcase-card img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    display:block;
+}
+
+.showcase-card .showcase-body{
+    padding:18px 20px;
+}
+
+.showcase-card h3{
+    font-size:16px;
+    margin-bottom:4px;
+}
+
+.showcase-card p{
+    font-size:14px;
+    color:var(--color-text-muted);
+    margin:0;
+}
+
+.final-cta{
+    max-width:1080px;
+    margin:20px auto 60px;
+    padding:48px;
+    border-radius:var(--radius-lg);
+    background:var(--gradient-primary);
+    color:#fff;
+    text-align:center;
+}
+
+.final-cta h2{
+    color:#fff;
+}
+
+.final-cta p{
+    color:rgba(255,255,255,.85);
+    max-width:480px;
+    margin:0 auto 24px;
+}
+
+.final-cta .btn{
+    width:auto;
+    padding:14px 30px;
+    display:inline-flex;
+    background:#fff;
+    color:var(--color-primary-dark);
+    box-shadow:none;
+}
+
+.final-cta .btn:hover{
+    background:#fff;
+    filter:brightness(.97);
+}
+
+.landing-footer{
+    max-width:1080px;
+    margin:0 auto;
+    padding:24px 24px 40px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--color-text-muted);
+}
+
+.landing-footer a{
+    color:var(--color-text-muted);
+    margin-left:16px;
+    text-decoration:none;
+}
+
+.landing-footer a:hover{
+    color:var(--color-primary);
+}
+
+@media (max-width:820px){
+
+    .landing-hero{
+        grid-template-columns:1fr;
+        padding-top:0;
+    }
+
+    .landing-hero-img{
+        order:-1;
+    }
+
+    .landing-hero h1{
+        font-size:32px;
+    }
+
+    .steps-grid,
+    .showcase-grid{
+        grid-template-columns:1fr;
+    }
+
+    .landing-footer{
+        flex-direction:column;
+        gap:8px;
+        text-align:center;
+    }
+
+    .landing-footer a{
+        margin:0 8px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<nav class="landing-nav">
+
+<a href="/" class="brand"><img class="brand-mark" src="/img/brand-mark.svg" alt="" width="32" height="32"> PawTrace</a>
+
+<div class="nav-actions">
+<a href="/login.html" class="btn btn-outline">Σύνδεση</a>
+<a href="/register.html" class="btn">Εγγραφή</a>
+</div>
+
+</nav>
+
+<header class="landing-hero">
+
+<div>
+<h1>Το κατοικίδιό σου, <span>πάντα ένα σκανάρισμα</span> μακριά από το σπίτι</h1>
+<p>Ένα NFC tag στο κολάρο συνδέει το κατοικίδιό σου με το ψηφιακό του προφίλ. Όποιος το βρει σαρώνει το tag με το κινητό του — χωρίς εγκατάσταση app — και βλέπει αμέσως στοιχεία επικοινωνίας και ιατρικές πληροφορίες.</p>
+
+<div class="cta-row">
+<a href="/register.html" class="btn">Δημιούργησε δωρεάν λογαριασμό</a>
+<a href="/lost-pets.html" class="btn btn-outline">Δες χαμένα κατοικίδια κοντά σου</a>
+</div>
+</div>
+
+<div class="landing-hero-img">
+<img src="/img/hero-dog-owner.jpg" alt="Ιδιοκτήτης αγκαλιάζει το σκύλο του">
+</div>
+
+</header>
+
+<section class="landing-section">
+
+<h2>Πώς λειτουργεί</h2>
+<p class="section-sub">Τρία βήματα ανάμεσα σε ένα χαμένο κατοικίδιο και μια ασφαλή επιστροφή στο σπίτι.</p>
+
+<div class="steps-grid">
+
+<div class="card step-card">
+<div class="step-icon">📝</div>
+<h3>Καταχώρησε το προφίλ του</h3>
+<p>Όνομα, φωτογραφία, ράτσα και ιατρικές σημειώσεις — όλα σε ένα ασφαλές, ιδιωτικό προφίλ.</p>
+</div>
+
+<div class="card step-card">
+<div class="step-icon">🏷️</div>
+<h3>Τοποθέτησε το NFC tag</h3>
+<p>Ένα ανθεκτικό tag στο κολάρο, συνδεδεμένο με το προφίλ — χωρίς μπαταρία, δεν φθείρεται.</p>
+</div>
+
+<div class="card step-card">
+<div class="step-icon">📞</div>
+<h3>Κάποιος το βρίσκει, σε καλεί</h3>
+<p>Ένα σκανάρισμα με το κινητό αρκεί για να δει τα στοιχεία επικοινωνίας σου — αμέσως.</p>
+</div>
+
+</div>
+
+</section>
+
+<section class="landing-section">
+
+<h2>Για σκύλους, γάτες — όλη την οικογένεια</h2>
+<p class="section-sub">Πρόσθεσε όσα κατοικίδια θες, μοιράσου την πρόσβαση με την οικογένειά σου, και λάβε ειδοποίηση αμέσως αν κάποιο χαθεί.</p>
+
+<div class="showcase-grid">
+
+<div class="showcase-card">
+<img src="/img/feature-collar.jpg" alt="Σκύλος με κολάρο και tag">
+<div class="showcase-body">
+<h3>🚨 Σήμανση "Χαμένο" με ένα κλικ</h3>
+<p>Ενημέρωσε τους πάντες γύρω σου και δέξου αναφορές εντοπισμού από όποιον το δει.</p>
+</div>
+</div>
+
+<div class="showcase-card">
+<img src="/img/feature-cat.jpg" alt="Ιδιοκτήτης με τη γάτα του">
+<div class="showcase-body">
+<h3>🐾 Δουλεύει για κάθε κατοικίδιο</h3>
+<p>Σκύλοι, γάτες, ό,τι κι αν φοράει κολάρο με tag — το ίδιο απλό ψηφιακό προφίλ.</p>
+</div>
+</div>
+
+</div>
+
+</section>
+
+<section class="final-cta">
+<h2>Ξεκίνα σήμερα, δωρεάν</h2>
+<p>Χρειάζεται λιγότερο από ένα λεπτό για να δημιουργήσεις λογαριασμό και να προσθέσεις το πρώτο σου κατοικίδιο.</p>
+<a href="/register.html" class="btn">Δημιούργησε λογαριασμό</a>
+</section>
+
+<footer class="landing-footer">
+
+<span>© <span id="year"></span> PawTrace</span>
+
+<div>
+<a href="/terms.html">Όροι χρήσης</a>
+<a href="/privacy.html">Απόρρητο</a>
+</div>
+
+</footer>
+
+<script>
+document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
