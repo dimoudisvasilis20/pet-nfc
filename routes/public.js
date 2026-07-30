@@ -3,8 +3,32 @@ const pool = require("../db/database");
 const { createNotification } = require("../utils/notify");
 const { getPhotoObject } = require("../utils/storage");
 const { logError } = require("../utils/errorReporting");
+const { validateBody, schemas, z } = require("../middleware/validate");
 
 const router = express.Router();
+
+const shareLocationSchema = z.object({
+    lat: schemas.latitude,
+    lng: schemas.longitude,
+});
+
+// pet_name, breed, medical_notes, reward, phone, alt_phone and photo below
+// are all free-text the pet's owner typed into their own form (routes/pets.js)
+// — nothing stops them containing "<script>..." or a stray quote. This page
+// is public and unauthenticated (anyone who scans the tag loads it), so
+// without escaping, a malicious owner's own pet fields would execute as
+// HTML/JS in every scanner's browser (stored XSS).
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
+
+function escapeHtml(value) {
+
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+
+}
 
 /*
 ========================================
@@ -154,16 +178,10 @@ found the pet, not a logged-in user)
 ========================================
 */
 
-router.post("/p/:code/share-location", async (req, res) => {
+router.post("/p/:code/share-location", validateBody(shareLocationSchema), async (req, res) => {
 
     const code = req.params.code;
     const { lat, lng } = req.body;
-
-    if (typeof lat !== "number" || typeof lng !== "number") {
-
-        return res.status(400).send("lat and lng (numbers) are required");
-
-    }
 
     try {
 
@@ -215,6 +233,19 @@ function buildScanPage(pet, code) {
         ? `https://www.google.com/maps?q=${pet.last_seen_lat},${pet.last_seen_lng}`
         : null;
 
+    const petName = escapeHtml(pet.pet_name);
+    const breed = escapeHtml(pet.breed);
+    const medicalNotes = escapeHtml(pet.medical_notes);
+    const reward = escapeHtml(pet.reward);
+    const phone = escapeHtml(pet.phone);
+    const altPhone = escapeHtml(pet.alt_phone);
+    const photo = escapeHtml(pet.photo);
+    // Server-generated (utils/tagCode.js, fixed alphanumeric charset) so this
+    // is already safe, but JSON.stringify makes it a properly-quoted JS
+    // string literal regardless — cheap insurance against that assumption
+    // ever changing.
+    const codeJs = JSON.stringify(code);
+
     return `
 <!DOCTYPE html>
 
@@ -227,7 +258,7 @@ function buildScanPage(pet, code) {
 <meta name="viewport"
 content="width=device-width, initial-scale=1">
 
-<title>${pet.pet_name}</title>
+<title>${petName}</title>
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
@@ -381,17 +412,17 @@ ${pet.is_lost ? `
 🚨 ΧΑΜΕΝΟ — βοηθήστε το να γυρίσει σπίτι
 ${lostAtText ? `<div class="lost-meta">🕒 Εξαφανίστηκε: ${lostAtText}</div>` : ""}
 ${hasLastSeenLocation ? `<div class="lost-meta">📍 <a href="${mapsUrl}" target="_blank" rel="noopener">Τελευταία γνωστή τοποθεσία</a></div>` : ""}
-${pet.reward ? `<div class="reward">🎁 Αμοιβή: ${pet.reward}</div>` : ""}
+${pet.reward ? `<div class="reward">🎁 Αμοιβή: ${reward}</div>` : ""}
 </div>
 ` : ""}
 
-${pet.photo ? `<img class="scan-photo" src="${pet.photo}" alt="${pet.pet_name}">` : `<div class="scan-photo-placeholder">🐾</div>`}
+${pet.photo ? `<img class="scan-photo" src="${photo}" alt="${petName}">` : `<div class="scan-photo-placeholder">🐾</div>`}
 
-<h1>🐾 ${pet.pet_name}</h1>
+<h1>🐾 ${petName}</h1>
 
 <div class="pet">
 
-${pet.breed}
+${breed}
 
 </div>
 
@@ -407,7 +438,7 @@ ${pet.breed}
 
 <p>
 
-${pet.medical_notes || "Δεν υπάρχουν καταχωρημένες πληροφορίες."}
+${pet.medical_notes ? medicalNotes : "Δεν υπάρχουν καταχωρημένες πληροφορίες."}
 
 </p>
 
@@ -415,7 +446,7 @@ ${pet.medical_notes || "Δεν υπάρχουν καταχωρημένες πλ�
 
 <a
 class="btn btn-success"
-href="tel:${pet.phone}">
+href="tel:${phone}">
 
 📞 Κλήση ιδιοκτήτη
 
@@ -425,7 +456,7 @@ ${pet.alt_phone ? `
 <a
 class="btn btn-outline"
 style="margin-top:10px;width:100%;"
-href="tel:${pet.alt_phone}">
+href="tel:${altPhone}">
 
 📞 Δεύτερο τηλέφωνο (αν δεν απαντήσει το πρώτο)
 
@@ -467,7 +498,7 @@ function shareLocation(){
 
             try {
 
-                const response = await fetch("/p/${code}/share-location", {
+                const response = await fetch("/p/" + ${codeJs} + "/share-location", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

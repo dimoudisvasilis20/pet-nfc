@@ -2,8 +2,18 @@ const express = require("express");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
 const { logError } = require("../utils/errorReporting");
+const { validateBody, schemas, z } = require("../middleware/validate");
 
 const router = express.Router();
+
+const updateLocationSchema = z.object({
+    lat: schemas.latitude,
+    lng: schemas.longitude,
+    // Bounded so a malicious/buggy client can't set an alert radius so huge
+    // that GET /pets/lost/nearby ends up scanning effectively every lost pet
+    // in the DB for this one user.
+    alert_radius_km: z.number().positive().max(200).optional(),
+});
 
 /*
 ========================================
@@ -12,15 +22,9 @@ OPT IN / UPDATE MY LOCATION
 ========================================
 */
 
-router.post("/me/location", requireLogin, async (req, res) => {
+router.post("/me/location", requireLogin, validateBody(updateLocationSchema), async (req, res) => {
 
     const { lat, lng, alert_radius_km } = req.body;
-
-    if (typeof lat !== "number" || typeof lng !== "number") {
-
-        return res.status(400).send("lat and lng (numbers) are required");
-
-    }
 
     try {
 

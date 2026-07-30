@@ -3,8 +3,24 @@ const bcrypt = require("bcrypt");
 const pool = require("../db/database");
 const requireLogin = require("../middleware/auth");
 const { logError } = require("../utils/errorReporting");
+const { validateBody, schemas, z } = require("../middleware/validate");
 
 const router = express.Router();
+
+const BCRYPT_ROUNDS = 12;
+
+const updateProfileSchema = z.object({
+    first_name: schemas.name,
+    last_name: schemas.name,
+    email: schemas.email,
+    phone: schemas.phone,
+    alt_phone: schemas.phone.optional().or(z.literal("")),
+});
+
+const changePasswordSchema = z.object({
+    current_password: z.string().min(1, "Ο τρέχων κωδικός είναι υποχρεωτικός").max(72),
+    new_password: schemas.password,
+});
 
 /*
 ========================================
@@ -60,7 +76,7 @@ UPDATE MY PROFILE
 ========================================
 */
 
-router.put("/me", requireLogin, async (req, res) => {
+router.put("/me", requireLogin, validateBody(updateProfileSchema), async (req, res) => {
 
     const { first_name, last_name, email, phone, alt_phone } = req.body;
 
@@ -108,15 +124,9 @@ CHANGE PASSWORD
 ========================================
 */
 
-router.put("/me/password", requireLogin, async (req, res) => {
+router.put("/me/password", requireLogin, validateBody(changePasswordSchema), async (req, res) => {
 
     const { current_password, new_password } = req.body;
-
-    if (!new_password || new_password.length < 6) {
-
-        return res.status(400).send("Ο νέος κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες");
-
-    }
 
     try {
 
@@ -139,7 +149,7 @@ router.put("/me/password", requireLogin, async (req, res) => {
 
         }
 
-        const hashedPassword = await bcrypt.hash(new_password, 10);
+        const hashedPassword = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
 
         await pool.query(
             "UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2",

@@ -6,8 +6,36 @@ const requireLogin = require("../middleware/auth");
 const { sendWelcomeEmail } = require("../utils/email");
 const { logError } = require("../utils/errorReporting");
 const { getGoogleAuthUrl, getGoogleProfile, verifyGoogleIdToken, findOrCreateGoogleUser } = require("../utils/googleAuth");
+const { validateBody, validateQuery, schemas, z } = require("../middleware/validate");
 
 const router = express.Router();
+
+// bcrypt's own hashing cost — 12 rounds is the current OWASP-recommended
+// floor (10 was the older default, now considered light for how fast GPUs
+// have gotten at brute-forcing bcrypt).
+const BCRYPT_ROUNDS = 12;
+
+const registerSchema = z.object({
+    first_name: schemas.name,
+    last_name: schemas.name,
+    email: schemas.email,
+    phone: schemas.phone,
+    alt_phone: schemas.phone.optional().or(z.literal("")),
+    password: schemas.password,
+});
+
+const loginSchema = z.object({
+    email: schemas.email,
+    password: z.string().min(1, "Ο κωδικός είναι υποχρεωτικός").max(72),
+});
+
+const googleMobileSchema = z.object({
+    idToken: z.string().min(1, "idToken is required"),
+});
+
+const verifyEmailQuerySchema = z.object({
+    token: z.string().min(1, "Λείπει το token επιβεβαίωσης"),
+});
 
 /*
 ========================================
@@ -15,7 +43,7 @@ REGISTER
 ========================================
 */
 
-router.post("/register", async (req, res) => {
+router.post("/register", validateBody(registerSchema), async (req, res) => {
 
     const {
         first_name,
@@ -28,7 +56,7 @@ router.post("/register", async (req, res) => {
 
     try {
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
         const verificationToken = crypto.randomBytes(32).toString("hex");
 
         await pool.query(
@@ -90,15 +118,9 @@ VERIFY EMAIL
 ========================================
 */
 
-router.get("/verify-email", async (req, res) => {
+router.get("/verify-email", validateQuery(verifyEmailQuerySchema), async (req, res) => {
 
     const { token } = req.query;
-
-    if (!token) {
-
-        return res.status(400).json({ message: "Λείπει το token επιβεβαίωσης" });
-
-    }
 
     try {
 
@@ -226,15 +248,9 @@ router.get("/auth/google/callback", async (req, res) => {
 // Mobile: the app signs in with the native Google Sign-In SDK itself (no
 // redirect through us) and just hands over the resulting ID token here to
 // establish the same kind of session the website's redirect flow creates.
-router.post("/auth/google/mobile", async (req, res) => {
+router.post("/auth/google/mobile", validateBody(googleMobileSchema), async (req, res) => {
 
     const { idToken } = req.body;
-
-    if (!idToken) {
-
-        return res.status(400).send("idToken is required");
-
-    }
 
     try {
 
@@ -266,7 +282,7 @@ LOGIN
 ========================================
 */
 
-router.post("/login", async (req, res) => {
+router.post("/login", validateBody(loginSchema), async (req, res) => {
 
     const { email, password } = req.body;
 
